@@ -16,10 +16,11 @@ import Utils  # noqa: F401
 
 
 # This was done to make the code more readable since the mlfinlab
-# package is used a lot, and they do not allow their paid users to view the source code. Thus, we were using a
-# combination of the source code and the documentation to create pass through functions which do contain docstring
-# for every function and commented out what I believe their source code to actually be. This is a temporary solution
-# until we decide whether the enterprice licence is worth it or not.
+# package is used a lot, revomes the need to import the KEY the biggest of the resons is that they do not allow their
+# paid users to view the source code. Thus, we were using a combination of the source code and the documentation to
+# create pass through functions which do contain docstring for every function and commented out what I believe their
+# source code to actually be. This is a solution until we decide whether the enterprice licence is worth it
+# or not.
 from Legendary_Genie.mlfinlab import *  # noqa: F401
 import mlfinlab as mlf  # noqa: F401 # This is to directly access the mlfinlab package
 

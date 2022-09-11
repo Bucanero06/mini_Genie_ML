@@ -9,24 +9,24 @@ class BarsAggregator:
         self.time_data_structures = time_data_structures
         self.standard_data_structures = standard_data_structures
 
-    def get_bars(self, tick_bars, out_bar_type='time', kwargs={}):
+    def get_bars(self, tick_bars, out_bar_type='time', **kwargs):
 
         # TODO: Need to add a check to make sure input is in correct format, for now is up to the user
 
-        assert tick_bars.index.name == None
-        assert tick_bars.columns.tolist() == ['date_time', 'price', 'volume'] \
-               or tick_bars.columns.tolist() == ['datetime', 'price', 'volume']
+        # assert tick_bars.index.name == None
+        # assert tick_bars.columns.tolist() == ['date_time', 'price', 'volume'] \
+        #        or tick_bars.columns.tolist() == ['datetime', 'price', 'volume']
 
         if out_bar_type == 'time':
-            return self.get_time_bars(tick_bars, **kwargs)
+            return self.get_time_bars(tick_bars,**kwargs)
         elif out_bar_type == 'tick':
-            return self.get_tick_bars(tick_bars, **kwargs)
+            return self.get_tick_bars(tick_bars,**kwargs)
         elif out_bar_type == 'volume':
-            return self.get_volume_bars(tick_bars, **kwargs)
+            return self.get_volume_bars(tick_bars,**kwargs)
         else:
             raise ValueError(f'Invalid bar type: {out_bar_type}')
 
-    def get_time_bars(self, tick_bars, resolution='MIN', verbose=False):
+    def get_time_bars(self, tick_bars, **kwargs):
         """
         Creates Time Bars: date_time, open, high, low, close, volume, cum_buy_volume, cum_ticks, cum_dollar_value.
 
@@ -40,9 +40,17 @@ class BarsAggregator:
         :param output_path: (str) Path to csv file, if to_csv is True
         :return: (pd.DataFrame) Dataframe of time bars, if to_csv=True return None
         """
+        resolution = kwargs.get('resolution', 'MIN')
+        threshold = kwargs.get('threshold', False)
+        batch_size = kwargs.get('batch_size', False)
+        average = kwargs.get('average', False)
+        verbose = kwargs.get('verbose', False)
+        a=self.time_data_structures.get_time_bars(tick_bars, resolution=resolution, verbose=verbose)
+        print(a)
+        exit()
         return self.time_data_structures.get_time_bars(tick_bars, resolution=resolution, verbose=verbose)
 
-    def get_tick_bars(self, tick_bars, threshold=5500, batch_size=1000000, verbose=False):
+    def get_tick_bars(self, tick_bars, **kwargs):
         """
             Creates the tick bars: date_time, open, high, low, close, volume, cum_buy_volume, cum_ticks, cum_dollar_value.
 
@@ -57,8 +65,14 @@ class BarsAggregator:
             :param output_path: (str) Path to csv file, if to_csv is True
             :return: (pd.DataFrame) Dataframe of volume bars
             """
+        resolution = kwargs.get('resolution', 'MIN')
+        threshold = kwargs.get('threshold', False)
+        batch_size = kwargs.get('batch_size', False)
+        average = kwargs.get('average', False)
+        verbose = kwargs.get('verbose', False)
         return self.standard_data_structures.get_tick_bars(tick_bars, threshold=threshold,
                                                            batch_size=batch_size, verbose=verbose)
+
 
     def get_volume_bars(self, tick_bars, threshold=28000, batch_size=1000000, average=False, verbose=False):
         """

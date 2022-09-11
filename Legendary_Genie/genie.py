@@ -1,0 +1,29 @@
+"""Example Strategies"""
+from mini_Genie.mini_genie_source import Strategies  # noqa: F401 Contains a few pre-made strategies
+
+"""Data Handling"""
+from Legendary_Genie._Data_Manager import Data_Manager  # noqa: F401
+
+
+
+"""Strategy Reports"""
+from Overfitting import walkfoward_report  # noqa: F401
+
+"""Utilities"""
+import Utils  # noqa: F401
+
+"""Third Party Libraries"""
+
+
+# This was done to make the code more readable since the mlfinlab
+# package is used a lot, and they do not allow their paid users to view the source code. Thus, we were using a
+# combination of the source code and the documentation to create pass through functions which do contain docstring
+# for every function and commented out what I believe their source code to actually be. This is a temporary solution
+# until we decide whether the enterprice licence is worth it or not.
+from Legendary_Genie.mlfinlab import *  # noqa: F401
+import mlfinlab as mlf  # noqa: F401 # This is to directly access the mlfinlab package
+
+
+
+import vectorbtpro as vbt  # noqa: F401 This is to directly access the vectorbtpro package
+from vectorbtpro import *  # noqa: F401 Easy to use backtesting library

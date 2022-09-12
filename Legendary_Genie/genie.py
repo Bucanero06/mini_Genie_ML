@@ -1,5 +1,4 @@
 """Example Strategies"""
-import mini_Genie
 from mini_Genie.mini_genie_source import Strategies  # noqa: F401 Contains a few pre-made strategies
 
 """Data Handling"""
@@ -25,6 +24,10 @@ from mlfinlab import *  # noqa: F401 # This is to directly access the mlfinlab_s
 #
 import vectorbtpro as vbt  # noqa: F401 This is to directly access the vectorbtpro package
 from vectorbtpro import *  # noqa: F401 Easy to use backtesting library
+
+vbt.settings.set_theme("dark")
+#
 #
 import numpy as np  # noqa: F401
 import pandas as pd  # noqa: F401
+import datetime as datetime  # noqa: F401

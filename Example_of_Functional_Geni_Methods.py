@@ -109,7 +109,7 @@ from genie import walkfoward_report, Strategies, Data_Manager, np
 
 
 
-
+import vectorbtpro as vbt
 """_______________________Example 1: Simple Walkthrough_________________________________"""
 
 data = Data_Manager.fetch_data(data_file_names='tick_data.csv',
@@ -142,42 +142,42 @@ vbt.settings['plotting']['layout']['height'] = 600
 # print(symbols_data)
 # print(symbols_data_1)
 
-closing_price = symbols_data.get("Close")
+closing_price = price
 closing_price_split, range_index = closing_price.vbt.range_split(n=10, range_len=10)
 
 
-# fast_ma = vbt.MA.run(close=closing_price_split, window=20).ma
-# slow_ma = vbt.MA.run(close=closing_price_split, window=50).ma
+fast_ma = vbt.MA.run(close=closing_price_split, window=20).ma
+slow_ma = vbt.MA.run(close=closing_price_split, window=50).ma
 
-# entries= fast_ma.crossed_above(slow_ma)
-# exits = fast_ma.crossed_below(slow_ma)
 
-# entries = fast_ma.vbt.crossed_above(slow_ma)
-# exits = fast_ma.vbt.crossed_below(slow_ma)
-def test(close,fast_ma, slow_ma):
-    fast_ma = vbt.MA.run(close=close, window=fast_ma).ma
-    slow_ma = vbt.MA.run(close=close, window=slow_ma).ma
-    entries = fast_ma.vbt.crossed_above(slow_ma)
-    exits = fast_ma.vbt.crossed_below(slow_ma)
-    return entries, exits
 
-print(closing_price_split)
-exit()
-indicator = vbt.IF(
-    class_name="test",
-    short_name="test",
-    input_names=["close"],
-    param_names=["fast_ma_window", "slow_ma_window"],
-    output_names=["entries", "exits"]).with_apply_func(
-    test,
-    fast_ma_window=20,
-    slow_ma_window=50,
-).run(close=closing_price_split,
-      fast_ma_window=[20, 30, 40],
-      slow_ma_window=[50, 60, 70],
-      )
-print(indicator)
-exit()
+entries = fast_ma.vbt.crossed_above(slow_ma)
+exits = fast_ma.vbt.crossed_below(slow_ma)
+
+# def test(close,fast_ma, slow_ma):
+#     fast_ma = vbt.MA.run(close=close, window=fast_ma).ma
+#     slow_ma = vbt.MA.run(close=close, window=slow_ma).ma
+#     entries = fast_ma.vbt.crossed_above(slow_ma)
+#     exits = fast_ma.vbt.crossed_below(slow_ma)
+#     return entries, exits
+#
+# print(closing_price_split)
+# exit()
+# indicator = vbt.IF(
+#     class_name="test",
+#     short_name="test",
+#     input_names=["close"],
+#     param_names=["fast_ma_window", "slow_ma_window"],
+#     output_names=["entries", "exits"]).with_apply_func(
+#     test,
+#     fast_ma_window=20,
+#     slow_ma_window=50,
+# ).run(close=closing_price_split,
+#       fast_ma_window=[20, 30, 40],
+#       slow_ma_window=[50, 60, 70],
+#       )
+# print(indicator)
+# exit()
 pf = vbt.Portfolio.from_signals(close=closing_price_split, entries=entries, exits=exits)
 
 # print(pf.get_total_return)
@@ -213,12 +213,12 @@ pf = vbt.Portfolio.from_signals(close=closing_price_split, entries=entries, exit
 #################################################################3
 
 # Plot Main Graph______________________________________________________________
-# fig = symbols_data.plot()
-# fig = fast_ma.vbt.plot(fig=fig, trace_kwargs=dict(name="Fast_MA"))
-# fig = slow_ma.vbt.plot(fig=fig, trace_kwargs=dict(name="Slow_MA"))
-# fig = entries.vbt.signals.plot_as_entries(symbols_data.get("Close"), fig=fig)
-# fig = exits.vbt.signals.plot_as_exits(symbols_data.get("Close"), fig=fig)
-# fig.show()
+fig = price.vbt.plot()
+fig = fast_ma.vbt.plot(fig=fig, trace_kwargs=dict(name="Fast_MA"))
+fig = slow_ma.vbt.plot(fig=fig, trace_kwargs=dict(name="Slow_MA"))
+fig = entries.vbt.signals.plot_as_entries(price, fig=fig)
+fig = exits.vbt.signals.plot_as_exits(price, fig=fig)
+fig.show()
 
 # Create Report______________________________________________________________
 # https://vectorbt.pro/pvt_c72eb381/api/returns/qs_adapter/#vectorbtpro.returns.qs_adapter.QSAdapter.full_report
@@ -378,6 +378,7 @@ parameter_data = dict(
     stop_loss_points=np.linspace(start=lower_bound_tp, stop=upper_bound_tp, num=number_of_suggestions,
                                  dtype=type(upper_bound_tp)),
 )
+
 
 """Calling the function directly"""
 long_entries, long_exits, short_entries, short_exits, \

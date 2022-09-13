@@ -1,14 +1,16 @@
-import os
+from logger_tt import logger
 
 from mini_Genie.mini_genie_source.Data_Handler.data_handler import Data_Handler  # noqa: F401
 from src._bars_aggregators import BarsAggregator  # noqa: F401
-from logger_tt import logger
+
 
 class Data_Manager:
 
     @staticmethod
     def fetch_csv_data_dask(data_file_name: object, data_file_dir: object = None,
-                            search_in=(".", "Datas"), scheduler='threads') -> object:
+                            search_in=(".", "Datas"), scheduler='threads',
+                            n_rows=None, first_or_last='first',
+                            ) -> object:
         """
         Loads data from a CSV file into a dask dataframe
         :param data_file_name: name of the data file
@@ -17,6 +19,9 @@ class Data_Manager:
         :param output_format: format of the date to be outputted
         :return: dask dataframe
         """
+
+        first_or_last = first_or_last.lower()
+
         from dask import dataframe as dd
         logger.info(f'Loading {data_file_name} from CSV file')
 
@@ -27,7 +32,14 @@ class Data_Manager:
 
         # load the data into a dask dataframe
         # bar_data = dd.read_csv(f'{data_file_dir}/{data_file_name}.csv', parse_dates=True)
-        bar_data = dd.read_csv(data_file_path, parse_dates=True)
+        if n_rows:
+            if first_or_last == 'first':
+                bar_data = dd.read_csv(data_file_path, parse_dates=True).head(n_rows)
+            elif first_or_last == 'last':
+                bar_data = dd.read_csv(data_file_path, parse_dates=True).tail(n_rows)
+        else:
+            bar_data = dd.read_csv(data_file_path, parse_dates=True)
+
         # convert all column names to upper case
         bar_data.columns = bar_data.columns.str.upper()
         logger.info(f'Finished Loading {data_file_name} from CSV file')
@@ -39,17 +51,18 @@ class Data_Manager:
 
         bar_data[datetime_col] = dd.to_datetime(bar_data[datetime_col])
         # bar_data[datetime_col] = bar_data[datetime_col].dt.strftime(output_format)
-        logger.info(f'_dask_compute')
-        # compute the dask dataframe
-        bar_data = bar_data.compute(scheduler=scheduler)
+        if not n_rows:
+            logger.info(f'_dask_compute')
+            # compute the dask dataframe
+            bar_data = bar_data.compute(scheduler=scheduler)
+
         # set the datetime column as the index
         bar_data.index = bar_data[datetime_col]
         # delete the datetime column
         del bar_data[datetime_col]
         return bar_data
 
-    @staticmethod
-    def fetch_data(data_file_names, data_file_dirs):
+    def fetch_data(self, data_file_names, data_file_dirs, **kwargs):
 
         import vectorbtpro as vbt
         if not data_file_dirs:
@@ -66,13 +79,17 @@ class Data_Manager:
             __path = f'{directory}/{file_name}'
             data_file_paths.append(__path)
 
-            data= Data_Handler.fetch_csv_data_dask(data_file_name=file_name, data_file_dir=directory,
-                                             scheduler='threads')
+            data = self.fetch_csv_data_dask(data_file_name=file_name, data_file_dir=directory,
+                                            search_in=data_file_dirs,
+                                            scheduler=kwargs.get('scheduler', 'threads'),
+                                            n_rows=kwargs.get('n_rows',None),
+                                            first_or_last=kwargs.get('first_or_last', 'first'))
 
             data_array.append(data)
 
         datas_dict = {}
         for data_name, data_bars in zip(data_file_names, data_array):
+            data_name = data_name.split('.')[0]
             datas_dict[data_name] = data_bars
 
         logger.info(f'Converting data to symbols_data obj')
@@ -87,4 +104,3 @@ class Data_Manager:
         bars_aggregator = BarsAggregator()
 
         return bars_aggregator.get_bars(data, out_bar_type=out_bar_type, kwargs=kwargs)
-

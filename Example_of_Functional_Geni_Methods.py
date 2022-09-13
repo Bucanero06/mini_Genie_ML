@@ -112,7 +112,7 @@ from genie import walkfoward_report, Strategies, Data_Manager, np
 import vectorbtpro as vbt
 """_______________________Example 1: Simple Walkthrough_________________________________"""
 
-data = Data_Manager.fetch_data(data_file_names='tick_data.csv',
+data = Data_Manager().fetch_data(data_file_names='tick_data.csv',
                                data_file_dirs=[".", "Datas", "Sample-Data"]
                                )
 

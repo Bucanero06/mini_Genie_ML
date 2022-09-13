@@ -19,6 +19,7 @@ import Utils  # noqa: F401
 # or not. #todo might not be working yet
 from Legendary_Genie.mlfinlab_src import *  # noqa: F401
 # from Legendary_Genie import mlfinlab_src  # noqa: F401
+import mlfinlab
 import mlfinlab as mlf  # noqa: F401 # This is to directly access the mlfinlab_src package
 from mlfinlab import *  # noqa: F401 # This is to directly access the mlfinlab_src package
 #

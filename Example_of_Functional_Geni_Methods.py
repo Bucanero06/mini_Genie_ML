@@ -1,12 +1,12 @@
 # NOTE:
-#   You can access vectorbt's and mlfinlab_src's packages through the genie package or by importing them directly.
+#   You can access vectorbt's and genieml_src's packages through the genie package or by importing them directly.
 #   e.g.:  from genie import vbt, mlf
 #   e.g.:  from genie import *
 #   e.g.:  import genie
 #          genie.vbt.<obj>(...)
 #   e.g.:  import genie
 #          genie.<obj>(...)
-#   When it comes to mlfinlab_src is preferably that you use it through the genie package, as it is already configured
+#   When it comes to genieml_src is preferably that you use it through the genie package, as it is already configured
 #   for debugging.
 #   e.g.:  import genie
 #          genie.<obj>(...)

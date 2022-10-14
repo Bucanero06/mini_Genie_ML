@@ -104,6 +104,5 @@ if __name__ == "__main__":
     parser.add_argument('-varimp_path', type=str, default='.', help='Path to save varimp to')
     parser.add_argument('-varimp_name', type=str, default='tick_data_automl_varimp.csv', help='Name of varimp to be saved')
     args = parser.parse_args()
-
     main(args)
     sys.exit(0)

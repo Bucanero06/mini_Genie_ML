@@ -22,7 +22,6 @@ class Data_Manager:
         :param output_format: format of the date to be outputted
         :return: dask dataframe
         """
-
         first_or_last = first_or_last.lower()
 
         from dask import dataframe as dd
@@ -37,11 +36,11 @@ class Data_Manager:
         # bar_data = dd.read_csv(f'{data_file_dir}/{data_file_name}.csv', parse_dates=True)
         if n_rows:
             if first_or_last == 'first':
-                bar_data = dd.read_csv(data_file_path, parse_dates=True).head(n_rows)
+                bar_data = dd.read_csv(data_file_path, parse_dates=True, sample=100000000).head(n_rows)
             elif first_or_last == 'last':
-                bar_data = dd.read_csv(data_file_path, parse_dates=True).tail(n_rows)
+                bar_data = dd.read_csv(data_file_path, parse_dates=True, sample=100000000).tail(n_rows)
         else:
-            bar_data = dd.read_csv(data_file_path, parse_dates=True)
+            bar_data = dd.read_csv(data_file_path, parse_dates=True, sample=100000000)
 
         # convert all column names to upper case
         bar_data.columns = bar_data.columns.str.lower()
@@ -82,11 +81,21 @@ class Data_Manager:
             __path = f'{directory}/{file_name}'
             data_file_paths.append(__path)
 
-            data = self.fetch_csv_data_dask(data_file_name=file_name, data_file_dir=directory,
-                                            search_in=data_file_dirs,
-                                            scheduler=kwargs.get('scheduler', 'threads'),
-                                            n_rows=kwargs.get('n_rows', None),
-                                            first_or_last=kwargs.get('first_or_last', 'first'))
+            try:
+                data = self.fetch_csv_data_dask(data_file_name=file_name, data_file_dir=directory,
+                                                search_in=data_file_dirs,
+                                                scheduler=kwargs.get('scheduler', 'threads'),
+                                                n_rows=kwargs.get('n_rows', None),
+                                                first_or_last=kwargs.get('first_or_last', 'first'))
+            except Exception as e:
+                # logger.exception(f'{e = }')
+                logger.warning(f'Could not load {file_name} as a timeseries thus is being loaded but not prepared')
+                import dask.dataframe as dd
+                from Genie.Modules.Utils import find_file
+                directory = find_file(file_name, *data_file_dirs)
+                data_file_path = f'{directory}/{file_name}'
+                data = dd.read_csv(data_file_path, parse_dates=False).compute(
+                    scheduler=kwargs.get('scheduler', 'threads'))
 
             data_array.append(data)
 
@@ -115,7 +124,7 @@ class Data_Manager:
             series_df = series_df.cumsum()
 
             if starting_prices:
-                # Add starting prices
+                # Add starting asset_prices
                 for col in series_df.columns:
                     series_df[col] = series_df[col] + starting_prices[col]
             ts_dict__[f"ts_{i + 1}"] = series_df
@@ -134,3 +143,19 @@ class Data_Manager:
                 plt.show()
 
         return ts_dict__
+
+    @staticmethod
+    def fetch_dates_from_df(df, start_date=None, end_date=None):
+        """Cut DF
+        :param df: pandas.DataFrame
+        :param start_date: str
+        :param end_date: str
+        :return: pandas.DataFrame
+        """
+        if start_date is None:
+            start_date = df.index[0]
+        if end_date is None:
+            end_date = df.index[-1]
+        df_index = df.index
+        mask = (df_index >= start_date) & (df_index <= end_date)
+        return df.loc[mask]

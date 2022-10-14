@@ -35,6 +35,6 @@
 
 import os
 os.environ['MLFINLAB_API_KEY'] = "0800b4ea410a702acddefdec86f93523"
-
+import mlfinlab as ml
 # from Genie.genieml_src import *  # noqa: F401
 # from Genie import _pipeline_scripts_examples as pipeline_scripts_examples  # noqa: F401

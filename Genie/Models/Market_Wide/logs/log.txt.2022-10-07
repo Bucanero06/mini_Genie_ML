@@ -1,0 +1,22 @@
+[2022-10-07 09:59:24] [root:177 DEBUG] _________________New log started__________________
+[2022-10-07 09:59:24] [root:178 DEBUG] Log config file: /home/ruben/.local/lib/python3.8/site-packages/logger_tt/log_config.json
+[2022-10-07 09:59:24] [root:125 DEBUG] Logging queue listener started!
+[2022-10-07 10:00:19] [parso.cache:152 DEBUG] pickle loaded: /home/ruben/.local/lib/python3.8/site-packages/jedi/third_party/typeshed/stdlib/3/builtins.pyi
+[2022-10-07 10:00:19] [parso.cache:152 DEBUG] pickle loaded: /home/ruben/.local/lib/python3.8/site-packages/jedi/third_party/typeshed/stdlib/3/sys.pyi
+[2022-10-07 10:00:51] [parso.python.diff:282 DEBUG] diff parser start
+[2022-10-07 10:00:51] [parso.python.diff:293 DEBUG] line_lengths old: 1; new: 1
+[2022-10-07 10:00:51] [parso.python.diff:296 DEBUG] -> code[replace] old[1:1] new[1:1]
+[2022-10-07 10:00:51] [parso.python.diff:421 DEBUG] parse_part from 1 to 1 (to 0 in part parser)
+[2022-10-07 10:00:51] [parso.python.diff:339 DEBUG] diff parser end
+[2022-10-07 10:10:29] [root:177 DEBUG] _________________New log started__________________
+[2022-10-07 10:10:29] [root:178 DEBUG] Log config file: /home/ruben/.local/lib/python3.8/site-packages/logger_tt/log_config.json
+[2022-10-07 10:10:29] [root:125 DEBUG] Logging queue listener started!
+[2022-10-07 10:16:42] [logger_tt:154 WARNING] Re-initializing logger_tt. "setup_logging()" should only be called one.
+[2022-10-07 10:16:42] [root:177 DEBUG] _________________New log started__________________
+[2022-10-07 10:16:42] [root:178 DEBUG] Log config file: /home/ruben/.local/lib/python3.8/site-packages/logger_tt/log_config.json
+[2022-10-07 10:16:42] [root:125 DEBUG] Logging queue listener started!
+[2022-10-07 10:16:52] [root:177 DEBUG] _________________New log started__________________
+[2022-10-07 10:16:52] [root:178 DEBUG] Log config file: /home/ruben/.local/lib/python3.8/site-packages/logger_tt/log_config.json
+[2022-10-07 10:16:52] [root:125 DEBUG] Logging queue listener started!
+[2022-10-07 10:33:06] [parso.cache:152 DEBUG] pickle loaded: /home/ruben/.local/lib/python3.8/site-packages/jedi/third_party/typeshed/stdlib/3/builtins.pyi
+[2022-10-07 10:33:06] [parso.cache:152 DEBUG] pickle loaded: /home/ruben/.local/lib/python3.8/site-packages/jedi/third_party/typeshed/stdlib/3/sys.pyi

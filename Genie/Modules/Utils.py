@@ -2,7 +2,6 @@
 import ast
 import inspect
 
-import numpy as np
 import pandas as pd
 
 from mini_genie_source.Utilities import _typing as tp
@@ -33,10 +32,14 @@ def multiline_eval(expr: str, context: tp.KwargsLike = None) -> tp.Any:
     return eval(compile(eval_expr, "file", "eval"), context)
 
 
+"""Data Handler"""
+def mltidx_df_to_dict(df,first_n=None):
+    return {k: v.droplevel(0)[:first_n if first_n else len(v)] for k, v in df.groupby(level=0)}
+
 """Range Splitter Handler"""
 
 
-def _clean_up_range_split_ohlc_nb(split_data,n_splits):
+def _clean_up_range_split_ohlc_nb(split_data, n_splits):
     # if len(split_data) == 1:
     #     new_split_data = np.empty(shape=n_splits)
     #     for j in range(n_splits):
@@ -49,7 +52,7 @@ def _clean_up_range_split_ohlc_nb(split_data,n_splits):
     # #
     # else:
 
-    new_split_data=[[int(0) for x in range(n_splits)] for y in range(len(split_data))]
+    new_split_data = [[int(0) for x in range(n_splits)] for y in range(len(split_data))]
 
     for i in range(len(split_data)):
         for j in range(n_splits):
@@ -74,7 +77,7 @@ def range_split_ohlc(data, columns, num_splits, range_len):
         np.ndarray: Indexes of each range.
 
         each of len(n_splits)
-                      FEATURES   (prices,datetime_index)  SPLITS
+                      FEATURES   (asset_prices,datetime_index)  SPLITS
     __prices_columns[feature_index](m in [0,1])[n in [0,n_splits]]
 
 
@@ -158,3 +161,48 @@ def probe_all_subdirectories(directory):
 
     listdirs(directory)
     return subdirectories
+
+
+def next_path(path_pattern):
+    import os
+
+    """
+    Finds the next free path in an sequentially named list of files
+
+    e.g. path_pattern = 'file-%s.txt':
+
+    file-1.txt
+    file-2.txt
+    file-3.txt
+
+    Runs in log(n) time where n is the number of existing files in sequence
+    """
+    i = 1
+
+    # First do an exponential search
+    while os.path.exists(path_pattern % i):
+        i = i * 2
+
+    # Result lies somewhere in the interval (i/2..i]
+    # We call this interval (a..b] and narrow it down until a + 1 = b
+    a, b = (i // 2, i)
+    while a + 1 < b:
+        c = (a + b) // 2  # interval midpoint
+        a, b = (c, b) if os.path.exists(path_pattern % c) else (a, c)
+
+    return path_pattern % b
+
+
+def fetch_pf_files_paths(study_dir):
+    import glob
+
+    targetPattern = r"%s/Portfolio/pf_*.pickle" % study_dir
+    return glob.glob(targetPattern)
+
+
+def save_record_to_file(df, path_to_file, write_mode='w'):
+    from os import path
+    if path.exists(path_to_file) and write_mode == 'a':
+        df.to_csv(path_to_file, mode=write_mode, header=False)
+    else:
+        df.to_csv(path_to_file)

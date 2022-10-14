@@ -1,37 +1,26 @@
-import os
-
+# import os
+#
+# import pandas as pd
+#
+# from Models.Synthetic_Model_0.__utils import __genie_strategy__
+# from Modules._Data_Manager import Data_Manager
+#
+# # Asjust the datetime index of the HCBM data by stretching or compressing it in order for the synthetic data to
+# # match the real data's daily volatility
+#
+# os.environ['MLFINLAB_API_KEY'] = "0800b4ea410a702acddefdec86f93523"
+#
+# import numpy as np
+#
+# from Genie.Modules._Synthetic_Data import HCBM_Synthetic_TS_Data
 import pandas as pd
 
-from Models.Synthetic_Model_0.__utils import __genie_strategy__
 from Modules._Data_Manager import Data_Manager
+from Modules._Synthetic_Data import HCBM_Synthetic_TS_Data
 
-# Asjust the datetime index of the HCBM data by stretching or compressing it in order for the synthetic data to
-# match the real data's daily volatility
+# FILE_NAME = "USA100_bid_ask_price_sample.csv"
+# FILE_ID = FILE_NAME.split(".")[0]
 
-os.environ['MLFINLAB_API_KEY'] = "0800b4ea410a702acddefdec86f93523"
-
-import numpy as np
-
-from Genie.Modules._Synthetic_Data import HCBM_Synthetic_TS_Data
-
-FILE_NAME = "USA100_bid_ask_price_sample.csv"
-FILE_ID = FILE_NAME.split(".")[0]
-CLOSING_COLUMN = "close"
-
-data = Data_Manager().fetch_data(data_file_names=FILE_NAME,
-                                 data_file_dirs=["../../../Datas",
-                                     ".", "Datas", "Datas/Sample-Data"],
-                                 )
-
-price = data["Ask"]
-synthetic_strategy_namedtuple = __genie_strategy__(price,
-                                                   volatility_window=50,
-                                                   return_namedtuple_volatility=True,
-                                                   REAL=True)
-synthetic_strategy_namedtuple.df.to_csv("test_synth_data.csv")
-exit()
-
-##########################
 
 
 hcbm_namedtuple = HCBM_Synthetic_TS_Data(
@@ -52,7 +41,6 @@ hcbm_namedtuple = HCBM_Synthetic_TS_Data(
     #                      'hcbm_mats': (n_assets,n_paths * 2),
     #                      'ts_1', 'ts_2', ..., n_assets]>
 )
-
 
 # Todo for all assets
 # for asset in range(synthetic_namedtuple.n_assets):

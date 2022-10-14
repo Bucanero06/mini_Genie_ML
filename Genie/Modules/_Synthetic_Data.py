@@ -97,7 +97,7 @@ def SP500_CorrGAN(dimensions=None, n_samples=None):
 
     return sample_from_corrgan(model_loc="/home/ruben/PycharmProjects/mini_Genie_ML/corrgan_models",
                                        dim=dimensions,
-                                       n_samples=len(rolling_corr.index.get_level_values(0).unique())
+                                       n_samples=n_samples
                                        # n_samples=2
                                        )
 

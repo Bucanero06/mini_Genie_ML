@@ -40,14 +40,14 @@ SP_ASSETS = ["AAPL",
              "GOOG", "GOOGL", "JNJ", "PG", "V", "JPM",
              "UNH", "HD", "MA", "NVDA", "VZ", "DIS", "PYPL", "ADBE", "T", "NFLX",
              "PFE", "MRK", "INTC", "BAC", "CMCSA", "PEP", "WMT", "KO", "XOM", "CSCO",
-             "^GSPC"
+             # "^GSPC"
              ]
 
 # Adapted from: https://marti.ai/ml/2019/10/13/tf-dcgan-financial-correlation-matrices.html
 dimensions = len(SP_ASSETS)
 print(f"Number of assets: {dimensions}")
 # Download stock returns and compute correlations
-# prices = yf.download(tickers=" ".join(SP_ASSETS), start="2017-08-01", end="2018-08-01")['Close']
+# asset_prices = yf.download(tickers=" ".join(SP_ASSETS), start="2017-08-01", end="2018-08-01")['Close']
 
 
 from datetime import datetime, timedelta
@@ -64,7 +64,7 @@ data = vbt.YFData.fetch(
     missing_index='drop'  # Creates problems with missing the index
 )
 prices = data.get("Close")
-# prices.pct_change().to_csv('sp30_rolling_corr.csv')
+# asset_prices.pct_change().to_csv('sp30_rolling_corr.csv')
 
 # Upper triangle indices (without diagonal) of correlation matrix (n, n) -> (n*(n-1)/2, 2)
 tri_rows, tri_cols = np.triu_indices(dimensions, k=1)

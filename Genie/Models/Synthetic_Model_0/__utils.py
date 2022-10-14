@@ -61,20 +61,22 @@ def __adjust_stat_properties__(real_price_series, synthetic_prices_df):
 
     return synthetic_namedtuple
 
+
 def random_date_df(start, end, n):
     """
     Generates a DataFrame with n rows, index is random date between start and end
     """
-    start_u = start.value//10**9
-    end_u = end.value//10**9
+    start_u = start.value // 10 ** 9
+    end_u = end.value // 10 ** 9
     return pd.DataFrame(
         {
             "Date":
-            pd.to_datetime(
-                np.random.randint(start_u, end_u, n), unit='s'
-            )
+                pd.to_datetime(
+                    np.random.randint(start_u, end_u, n), unit='s'
+                )
         }
     ).set_index('Date')
+
 
 def smart_datetimeindex(start, end, freq):
     start = pd.to_datetime(start)  # convert to datetime
@@ -82,9 +84,11 @@ def smart_datetimeindex(start, end, freq):
     date_range = pd.date_range(start, end, freq=freq)
     date_range = date_range.sort_values()
     return date_range
+
+
 def __genie_strategy__(
         # price_series is a pandas.Series object containing the price data for the strategy to be backtested on (e.g. close price)
-        price_series,
+        price_series, # pandas.Series
         num_days=None,  # (int) Number of days to add for vertical barrier.
         num_hours=None,  # (int) Number of hours to add for vertical barrier.
         num_minutes=None,  # (int) Number of minutes to add for vertical barrier.
@@ -102,6 +106,7 @@ def __genie_strategy__(
         volatility_window=None,
         threshold=None,
         REAL=False,
+        fake_freq=None,
         **kwargs):
     """
 
@@ -125,21 +130,20 @@ def __genie_strategy__(
     if num_seconds is None:
         num_seconds = 0
 
-
-
     # Get_volatility
     if not REAL:
+        if fake_freq is None:
+            fake_freq = "1D"
+
         start = '1970-01-01 00:00:00.001'
         end = pd.to_datetime(start) + pd.Timedelta(seconds=len(price_series) - 1)
-        price_series.index = smart_datetimeindex(start=start, end=end, freq='1S')
+        price_series.index = smart_datetimeindex(start=start, end=end, freq=fake_freq)
         #
         volatility = price_series.rolling(volatility_window).var()
         vol_mean = volatility.mean()
     else:
-        volatility =  ml.util.get_daily_vol(close=price_series, lookback=volatility_window)
+        volatility = ml.util.get_daily_vol(close=price_series, lookback=volatility_window)
         vol_mean = volatility.mean()
-
-
 
     """
     Suppose we use a mean-reverting strategy as our primary model, giving each observation a label of -1 or 1. 
@@ -178,7 +182,6 @@ def __genie_strategy__(
     using the CUSUM filter, we can use the triple-barrier method to compute our meta-labels by passing in the side 
     predicted by the primary model.
     """
-
 
     # Get events and labels for each event using the triple barrier method
     triple_barrier_events = ml.labeling.get_events(close=price_series,
@@ -249,7 +252,6 @@ def __genie_strategy__(
         triple_barrier_events[['pt', 'sl']].loc[labels_one.index],
         labels_one[['ret', 'trgt', 'bin']].loc[labels_one.index]
     ], axis=1)
-
 
     # print(f"price_series: \n\n{price_series}\n\n")
     # print(f"triple_barrier_events: \n\n{triple_barrier_events}\n\n")

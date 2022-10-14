@@ -41,7 +41,7 @@ def Load_n_Prep_Data(file_name):
 
     # Compute mode of returns
 
-    # Drop prices
+    # Drop asset_prices
     data = data.drop(["low", "high", "close"], axis=1)
     # data = data.drop(["open", "low", "high", "close"], axis=1)
 

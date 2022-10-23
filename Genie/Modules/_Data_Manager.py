@@ -31,6 +31,10 @@ class Data_Manager:
         directory = data_file_dir if data_file_dir else find_file(data_file_name, *search_in)
 
         data_file_path = f'{directory}/{data_file_name}'
+        #add .csv if not present
+        if not data_file_path.endswith('.csv'):
+            data_file_path += '.csv'
+
 
         # load the data into a dask dataframe
         # bar_data = dd.read_csv(f'{data_file_dir}/{data_file_name}.csv', parse_dates=True)

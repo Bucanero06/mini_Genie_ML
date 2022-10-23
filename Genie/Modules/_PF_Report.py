@@ -1,7 +1,7 @@
 import glob
 
 import numpy as np
-
+import vectorbtpro as vbt
 from mini_genie_source.Equipment_Handler.equipment_handler import CHECKTEMPS
 from mini_genie_source.Run_Time_Handler.equipment_settings import TEMP_DICT
 
@@ -30,7 +30,6 @@ def filter_unmasked(mask, pf_daily=None, pf_weekly=None, pf_monthly=None, metric
 
 
 # @ray.remote
-import vectorbtpro as vbt
 
 
 def compute_metrics_report(pf, unique_params=None):
@@ -44,6 +43,9 @@ def compute_metrics_report(pf, unique_params=None):
     # Save the benchmark metrics only once
     param_metrics = param_metrics.drop(columns=['Benchmark'])
     # param_metrics.columns = [unique_params]
+    print(f'Done with {unique_params}')
+    CHECKTEMPS(TEMP_DICT)
+
     return param_metrics
 
 
@@ -59,22 +61,21 @@ def metrics_qs_report(pf_or_pf_path, remove_non_returns=True,
         pf = pf_or_pf_path
 
     if remove_non_returns:
-        # > Remove those combinations with zero/negative returns< #
-        # pf_total_returns = pf.get_total_return(chunked=True)
-        total_trades = pf.get_trades(chunked=True).count()
-        mask = total_trades[total_trades != 0].index
-
-        pf = pf[mask] if len(mask) != 0 else pf
+        # > Remove those combinations with zero trades< #
+        # total_trades = pf.get_trades(chunked=True).count()
+        # mask = total_trades[total_trades != 0].index
+        #
+        # pf = pf[mask] if len(mask) != 0 else pf
 
         if pf.wrapper.shape[1] == 0:
-            logger.warning('Portfolio filtered completely out by total returns filter')
+            logger.warning('Portfolio filtered completely out by total trades filter')
             return None
         else:
-            logger.info(f'After total returns filter -> {pf.wrapper.shape[1]} strategies')
+            logger.info(f'After total trades filter -> {pf.wrapper.shape[1]} strategies')
 
     # Get parameter combinations from the portfolio
     param_combinations = pf.wrapper.columns
-
+    print(f'There are {len(param_combinations)} parameter combinations')
     # > Compute the metrics report for each parameter combination < #
     # ray.init(num_cpus=20)
     # pf_id = ray.put(pf)
@@ -82,6 +83,8 @@ def metrics_qs_report(pf_or_pf_path, remove_non_returns=True,
     #     [parallel_compute_metrics_report.remote(pf_id, param_combination) for param_combination in param_combinations])
     # pf_metric_qs_report_df = pd.concat(results, axis=1)
     # pf_metric_qs_report_df.to_csv('pf_metric_qs_report_df.csv'))
+    import os
+    os.environ["RAY_OBJECT_STORE_ALLOW_SLOW_STORAGE"] = '1'
     param_combinations = param_combinations
     CHECKTEMPS(TEMP_DICT)
     parametrized_compute_metrics_report = vbt.parameterized(compute_metrics_report,
@@ -90,9 +93,13 @@ def metrics_qs_report(pf_or_pf_path, remove_non_returns=True,
                                                             # n_chunks=5,
                                                             chunk_len='auto',
                                                             # chunk_len=1,
-                                                            engine='ray',
                                                             show_progress=True,
-                                                            )
+                                                            engine='ray',
+                                                            init_kwargs={
+                                                                # 'address': 'auto',
+                                                                'num_cpus': 26,
+                                                                'object_store_memory': 100 * 10 ** 9
+                                                            })
 
     pf_metric_qs_report_df = parametrized_compute_metrics_report(
         pf=pf,
@@ -145,8 +152,9 @@ if __name__ == '__main__':
     # data = data.drop(level=0, axis=1)
     # print(data.head())
     # exit()
-    test_pf_paths = "/home/ruben/PycharmProjects/mini_Genie/Studies/Study_OILUSD/Portfolio/pf_*.pickle"
-
+    # test_pf_paths = "/home/ruben/PycharmProjects/mini_Genie/Studies/Study_OILUSD/Portfolio/pf_*.pickle"
+    test_pf_paths = "/home/ruben/pycharm_projects/mini_Genie_ML/Genie/Modules/backtest/Studies/MMT_RLGL_study/Portfolio/pf_*.pickle"
+    logger.info(f"Loading portfolios from {test_pf_paths}")
     parametrized_metrics_qs_report = vbt.parameterized(metrics_qs_report,
                                                        merge_func="concat",
                                                        # n_chunks=np.floor(param_combinations.shape[0]/4).astype(int),
@@ -167,27 +175,18 @@ if __name__ == '__main__':
     # pf = vbt.Portfolio.column_stack(pf)
 
     metrics_df = parametrized_metrics_qs_report(pf_or_pf_path=vbt.Param(
-        np.random.choice(glob.glob(test_pf_paths), size=1, replace=False, p=None)
+        # np.random.choice(glob.glob(test_pf_paths), size=1, replace=False, p=None)
+        glob.glob(test_pf_paths)
         , name='pf_path')
     )
 
     # Change index to range index
+    logger.info(f"Changing index to range index")
     metrics_df = metrics_df.reset_index(drop=False)
     metrics_df = metrics_df.vbt.sort_index()
 
     # Drop pf_path column
+    logger.info(f"Dropping pf_path column")
     metrics_df = metrics_df.drop(columns=['pf_path'])
-
-    # metrics_df.to_csv(f"temp_csv/pf_metrics_report_all.csv")
-
-    # exit()
-    # for i, pf_path in enumerate(glob.glob(test_pf_paths)):
-    #     #
-    #     i_metrics_df = metrics_qs_report(pf_path)
-    #     i_metrics_df.to_csv(f"temp_csv/pf_metrics_report_{i}.csv")
-    #
-    #     #
-    #     # if i != 0:
-    #     #     save_record_to_file(i_metrics_df, 'pf_metric_qs_report_df.csv', write_mode='a')
-    #     # else:
-    #     #     save_record_to_file(i_metrics_df, 'pf_metric_qs_report_df.csv', write_mode='w')
+    logger.info(f"Saving metrics_df to csv")
+    metrics_df.to_csv(f"temp_pf_metrics_report_all.csv")

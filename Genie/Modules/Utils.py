@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 import ast
+import gc
 import inspect
 
 import pandas as pd
+import psutil
 
 from mini_genie_source.Utilities import _typing as tp
-
+from logger_tt import logger
 """Expression Handler"""
 
 
@@ -33,8 +35,11 @@ def multiline_eval(expr: str, context: tp.KwargsLike = None) -> tp.Any:
 
 
 """Data Handler"""
-def mltidx_df_to_dict(df,first_n=None):
+
+
+def mltidx_df_to_dict(df, first_n=None):
     return {k: v.droplevel(0)[:first_n if first_n else len(v)] for k, v in df.groupby(level=0)}
+
 
 """Range Splitter Handler"""
 
@@ -124,6 +129,44 @@ def dict_to_namedtuple(d, add_prefix=None):
     return SimpleNamespace(**d)
 
 
+def convert_to_seconds(input_timeframe):
+    '''
+    Can accept any time frame as long as it is composed of a signle continuous interger and a timeframe recognized by pandas and convert the string timeframe into seconds.
+    e.g. 1m,5 m,15min, 34 min, 1h, h4,etc ...
+    '''
+    seconds_per_unit = {"s": 1, "m": 60, "h": 3600, "d": 3600 * 24, "w": 3600 * 24 * 7}
+    input_timeframe = input_timeframe.lower()
+    # try to extract an integer string
+    import re
+    splits = re.split('(\d+)', input_timeframe)
+    integer_str = splits[1]
+
+    # try to extract the time intervel
+    if splits[2].startswith('s'):
+        timeframe_str = 's'
+    elif splits[2].startswith('m'):
+        timeframe_str = 'm'
+    elif 'm' in splits[2]:
+        timeframe_str = 'm'
+    elif 'h' in splits[2]:
+        timeframe_str = 'h'
+    elif 'd' in splits[2]:
+        timeframe_str = 'd'
+    elif 'w' in splits[2]:
+        timeframe_str = 'w'
+    elif splits[2].startswith('h'):
+        timeframe_str = 'h'
+    elif splits[2].startswith('d'):
+        timeframe_str = 'd'
+    elif splits[2].startswith('w'):
+        timeframe_str = 'w'
+    else:
+        print('unknown timeframe:', input_timeframe)
+        print('please input a timeframe in the form of 1min, 5min, 1h, 60s, etc ....')
+        return
+    return int(integer_str) * seconds_per_unit[timeframe_str]
+
+
 """Directories Handling"""
 
 
@@ -206,3 +249,33 @@ def save_record_to_file(df, path_to_file, write_mode='w'):
         df.to_csv(path_to_file, mode=write_mode, header=False)
     else:
         df.to_csv(path_to_file)
+
+
+'''Indicators Aid'''
+
+
+def rsi_params_filter(params, low_rsi=40, high_rsi=60, **kwargs):
+    # import numpy as np
+    # a_1 = params["rsi_windows"][np.where(params["rsi_windows"] < kwargs.get('low_rsi', low_rsi))[0]]
+    # a_2 = params["rsi_windows"][np.where(params["rsi_windows"] > kwargs.get('high_rsi', high_rsi))[0]]
+    # a_3 = []
+    # for a, b in zip(a_1, a_2):
+    #     a_3.append(a)
+    #     a_3.append(b)
+    # params["rsi_windows"] = a_3
+    logger.info(f'rsi_windows: {len(params["rsi_windows"])}')
+    # del a_1, a_2, a_3
+    return params
+
+
+'''Equipment Aid'''
+def auto_garbage_collect(pct=80.0):
+    """
+    auto_garbage_collection - Call the garbage collection if memory used is greater than 80% of total available memory.
+                              This is called to deal with an issue in Ray not freeing up used memory.
+
+        pct - Default value of 80%.  Amount of memory in use that triggers the garbage collection call.
+    """
+    if psutil.virtual_memory().percent >= pct:
+        gc.collect()
+    return

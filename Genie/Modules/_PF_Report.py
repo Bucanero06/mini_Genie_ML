@@ -1,3 +1,4 @@
+import gc
 import glob
 
 import numpy as np
@@ -62,10 +63,10 @@ def metrics_qs_report(pf_or_pf_path, remove_non_returns=True,
 
     if remove_non_returns:
         # > Remove those combinations with zero trades< #
-        # total_trades = pf.get_trades(chunked=True).count()
-        # mask = total_trades[total_trades != 0].index
-        #
-        # pf = pf[mask] if len(mask) != 0 else pf
+        total_trades = pf.get_trades(chunked=True).count()
+        mask = total_trades[total_trades != 0].index
+
+        pf = pf[mask] if len(mask) != 0 else pf
 
         if pf.wrapper.shape[1] == 0:
             logger.warning('Portfolio filtered completely out by total trades filter')
@@ -97,9 +98,10 @@ def metrics_qs_report(pf_or_pf_path, remove_non_returns=True,
                                                             engine='ray',
                                                             init_kwargs={
                                                                 # 'address': 'auto',
-                                                                'num_cpus': 26,
-                                                                'object_store_memory': 100 * 10 ** 9
-                                                            })
+                                                                'num_cpus': 20,
+                                                                # 'object_store_memory': 100 * 10 ** 9
+                                                            }
+                                                            )
 
     pf_metric_qs_report_df = parametrized_compute_metrics_report(
         pf=pf,
@@ -112,6 +114,13 @@ def metrics_qs_report(pf_or_pf_path, remove_non_returns=True,
     pf_metric_qs_report_df = pf_metric_qs_report_df.transpose()
     pf_metric_qs_report_df = pf_metric_qs_report_df.vbt.sort_index()
     # pf_metric_qs_report_df.to_csv(f"temp_csv/pf_metrics_report_all.csv")
+
+    # Clean up RAM (mainly big items)
+    del pf_metric_qs_report_df
+    del pf
+    del param_combinations
+    gc.collect()
+    CHECKTEMPS(TEMP_DICT)
 
     return pf_metric_qs_report_df
 
@@ -153,22 +162,21 @@ if __name__ == '__main__':
     # print(data.head())
     # exit()
     # test_pf_paths = "/home/ruben/PycharmProjects/mini_Genie/Studies/Study_OILUSD/Portfolio/pf_*.pickle"
-    test_pf_paths = "/home/ruben/pycharm_projects/mini_Genie_ML/Genie/Modules/backtest/Studies/MMT_RLGL_study/Portfolio/pf_*.pickle"
+    test_pf_paths = "/home/ruben/pycharm_projects/mini_Genie_ML/Genie/Modules/backtest/Studies/US_Light_debugging_study/Portfolio/pf_*.pickle"
     logger.info(f"Loading portfolios from {test_pf_paths}")
     parametrized_metrics_qs_report = vbt.parameterized(metrics_qs_report,
                                                        merge_func="concat",
                                                        # n_chunks=np.floor(param_combinations.shape[0]/4).astype(int),
                                                        # n_chunks=np.floor(param_combinations.shape[0]/4).astype(int),
-                                                       chunk_len=1,
+                                                       # chunk_len=1,
+                                                       chunk_len='auto',
+                                                       show_progress=True,
                                                        # engine='ray',
-                                                       show_progress=False,
                                                        # init_kwargs={
                                                        #     # 'address': 'auto',
-                                                       #     'num_cpus': 28,
-                                                       #     # 'n_chunks':"auto",
-                                                       #     # 'memory': 100 * 10 ** 9,
-                                                       #     # 'object_store_memory': 100 * 10 ** 9,
-                                                       # },
+                                                       #     'num_cpus': 20,
+                                                       #     # 'object_store_memory': 100 * 10 ** 9
+                                                       # }
                                                        )
     # pf = ray_portfolio_load(
     #     vbt.Param(glob.glob(test_pf_path), name='pf_path'))
@@ -176,7 +184,7 @@ if __name__ == '__main__':
 
     metrics_df = parametrized_metrics_qs_report(pf_or_pf_path=vbt.Param(
         # np.random.choice(glob.glob(test_pf_paths), size=1, replace=False, p=None)
-        glob.glob(test_pf_paths)
+        glob.glob(test_pf_paths)[:2]
         , name='pf_path')
     )
 
@@ -189,4 +197,4 @@ if __name__ == '__main__':
     logger.info(f"Dropping pf_path column")
     metrics_df = metrics_df.drop(columns=['pf_path'])
     logger.info(f"Saving metrics_df to csv")
-    metrics_df.to_csv(f"temp_pf_metrics_report_all.csv")
+    metrics_df.to_csv(f"debugging_study_pf_metrics_report_all.csv")

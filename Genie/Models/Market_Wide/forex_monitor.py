@@ -126,6 +126,7 @@ for index, asset_ohlc in enumerate(preped_forex_data.keys()):
     print(f'{preped_forex_data[asset_ohlc] = }')
 
 
+
 # x, y = make_forecasting_frame(forex_data_dict[asset_ohlc]["close"], kind="price", max_timeshift=2, rolling_direction=1)
 #
 # # Replace id column with (asset name, date) tuple

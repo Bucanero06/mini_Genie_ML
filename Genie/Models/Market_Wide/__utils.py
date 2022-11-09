@@ -6,7 +6,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import GridSearchCV
 
 environ['MLFINLAB_API_KEY'] = "0800b4ea410a702acddefdec86f93523"
-import mlfinlab as ml
+from Genie import genieml_src as ml
 
 
 def __adjust_stat_properties__(real_price_series, synthetic_prices_df):

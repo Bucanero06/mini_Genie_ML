@@ -8,6 +8,7 @@ import psutil
 
 from mini_genie_source.Utilities import _typing as tp
 from logger_tt import logger
+
 """Expression Handler"""
 
 
@@ -243,6 +244,111 @@ def fetch_pf_files_paths(study_dir):
     return glob.glob(targetPattern)
 
 
+def load_n_combine_pf_objects_then_save(study_dir, target=None, new_pf_obj=None,
+                                        output_pf_file_name='pf_combined',
+                                        delete_old_pf_files=False,batch_size=10):
+    """Load all pf objects from a study directory and combine them into a single pf object then save it to a new file.
+    Does not modify the original pf objects and does not return any objects other than false if the operation failed
+    and true if it succeeded. Has room for improvement, usefull but missing checks and error handling.
+
+    Args:
+        study_dir (str): Path to the study directory.
+        target (str, optional): Path to the target file. Defaults to None/'all'.
+        new_pf_obj (pf, optional): New pf object to be added to the combined pf object. Defaults to None.
+        output_dir (str, optional): Name of the output file. Defaults to 'pf_combined'.
+        delete_old_pf_files (bool, optional): Delete the old pf files after combining them. Defaults to False but it is
+            recommended to set it to True when possible to save space.
+
+
+        """
+    from vectorbtpro import Portfolio
+    import os
+    import numpy as np
+
+    if target is None or target == 'all':  # load all pf objects and combine them into a single object
+        pf_paths = fetch_pf_files_paths(study_dir)  # .remove('pf_combined')
+
+        try:
+            logger.info(pf_paths)
+            # remove if pf_combined is in the list of pf files
+            old_target_path = os.path.join(study_dir, 'Portfolio', 'pf_combined.pickle')
+            if old_target_path in pf_paths: pf_paths.remove(old_target_path)
+            # todo this can be done in parallel as shown in other places in the code
+            # pf_objects = [Portfolio.load(pf_path) for pf_path in pf_paths]
+
+            # Get max n_chunks given max batch_size
+            n_chunks = int(np.floor(len(pf_paths) / batch_size)) if batch_size < len(pf_paths) else 1
+            # Split arrays into n_chunks
+            chunked_pf_paths = np.array_split(pf_paths, n_chunks)
+            #
+            # from Utilities.general_utilities import put_objects_list_to_ray
+            # chunks_ids_of_params_left_to_compute = put_objects_list_to_ray(chunks_of_params_left_to_compute)
+            # for epoch_n, epoch_params_record_id in enumerate(chunks_of_params_left_to_compute):
+            for chunk_id, pf_paths_chunk in enumerate(chunked_pf_paths):
+                logger.info(f'Loading pf objects chunk {chunk_id + 1}/{n_chunks}')
+                # Load this chunk's pf objects
+                pf_objects_chunk = [Portfolio.load(pf_path) for pf_path in pf_paths_chunk]
+                logger.info(f'Combining pf objects chunk {chunk_id + 1}/{n_chunks}')
+                # Combine them into a single pf object
+                pf_combined = Portfolio.column_stack(pf_objects_chunk)
+                logger.info(f'Saving pf objects chunk {chunk_id + 1}/{n_chunks}')
+                # Save the combined pf object
+                pf_combined.save(os.path.join(study_dir, 'Portfolio', 'pf_combined_chunk_%s.pickle' % chunk_id))
+                logger.info(f'pf_combined_chunk_{chunk_id} saved')
+
+                # Clean RAM
+                del pf_objects_chunk
+                del pf_combined
+                gc.collect()
+
+
+            # Delete the old pf files
+            if delete_old_pf_files:
+                for pf_path in pf_paths:
+                    os.remove(pf_path)
+
+            return True
+
+        except Exception as e:
+            logger.error(e)
+            return False
+    elif new_pf_obj is not None:  # if new_pf_obj is not None then target must be a string
+        try:
+            # make sure target file exists and load it else save only the new_pf_obj as combined_pf
+            target_pf_path = "%s/Portfolio/%s.pickle" % (study_dir, target)
+            if os.path.exists(target_pf_path):
+                pf_objects = [Portfolio.load(target_pf_path), new_pf_obj]
+            else:
+                pf_objects = [new_pf_obj]
+        except Exception as e:
+            logger.error(e)
+            return False
+    else:
+        logger.error('please specify either target or new_pf_obj')
+        return False
+
+    '''Combine all pf objects into one'''
+    try:
+        if len(pf_objects) > 1:
+            logger.info('combining pf objects')
+            # combined_pf = Portfolio.combine(pf_objects)
+            combined_pf = Portfolio.column_stack(pf_objects)
+            logger.info('done combining pf objects')
+        else:
+            logger.info('only one pf object found, no need to combine')
+            logger.info(f'{pf_objects  = }')
+            combined_pf = pf_objects[0]
+
+        '''Save the combined pf object'''
+        combined_pf_path = "%s/Portfolio/%s" % (study_dir, output_pf_file_name)
+        combined_pf.save(combined_pf_path + '.pickle')
+    except Exception as e:
+        logger.error(e)
+        return False
+
+    return True
+
+
 def save_record_to_file(df, path_to_file, write_mode='w'):
     from os import path
     if path.exists(path_to_file) and write_mode == 'a':
@@ -269,6 +375,8 @@ def rsi_params_filter(params, low_rsi=40, high_rsi=60, **kwargs):
 
 
 '''Equipment Aid'''
+
+
 def auto_garbage_collect(pct=80.0):
     """
     auto_garbage_collection - Call the garbage collection if memory used is greater than 80% of total available memory.

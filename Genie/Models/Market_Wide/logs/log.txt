@@ -1,6 +1,0 @@
-[2022-10-14 11:44:49] [root:177 DEBUG] _________________New log started__________________
-[2022-10-14 11:44:49] [root:178 DEBUG] Log config file: /home/ruben/.local/lib/python3.8/site-packages/logger_tt/log_config.json
-[2022-10-14 11:44:49] [root:125 DEBUG] Logging queue listener started!
-[2022-10-14 14:22:24] [root:177 DEBUG] _________________New log started__________________
-[2022-10-14 14:22:24] [root:178 DEBUG] Log config file: /home/ruben/.local/lib/python3.8/site-packages/logger_tt/log_config.json
-[2022-10-14 14:22:24] [root:125 DEBUG] Logging queue listener started!

@@ -1,10 +1,10 @@
 #
 # exit()
 #
-from genieml_src.data_structures import get_dollar_bars
+from Modules.data_structures import get_dollar_bars
 
 import pandas as pd
-df = pd.read_csv("../../Modules/backtest/Datas/XAUUSD.csv")
+df = pd.read_csv("../../Modules/New_Nate_Work/Datas/XAUUSD.csv")
 
 # df = get_dollar_bars(file_path_or_df=df, threshold=70000,
 #                      batch_size=20000000, verbose=True, to_csv=True,

@@ -1,4 +1,4 @@
-# Contributing to GenieTrader
+# Contributing to GenieOmnipresent
 
 Involvement from the trading community is a goal for this project. All help is welcome!
 Developers can open issues on GitHub to discuss proposed enhancements/changes, or
@@ -36,8 +36,8 @@ To contribute, the following steps should be followed;
 ## Tips
 
 - Conform to the established coding practices, see _Coding Standards_ in the
-  [Developer Guide](https://docs.Genietrader.io/developer_guide/index.html).
+  [Developer Guide](https://docs.GenieOmnipresent.io/developer_guide/index.html).
 - Keep PR's small and focused.
 - Reference the related GitHub issue(s) in the PR comment.
 
-Thank you for your interest in GenieTrader!
+Thank you for your interest in GenieOmnipresent!

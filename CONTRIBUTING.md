@@ -1,4 +1,4 @@
-# Contributing to GenieOmnipresent
+# Contributing to Genie Omnipresent
 
 Involvement from the trading community is a goal for this project. All help is welcome!
 Developers can open issues on GitHub to discuss proposed enhancements/changes, or
@@ -40,4 +40,4 @@ To contribute, the following steps should be followed;
 - Keep PR's small and focused.
 - Reference the related GitHub issue(s) in the PR comment.
 
-Thank you for your interest in GenieOmnipresent!
+Thank you for your interest in Genie Omnipresent!

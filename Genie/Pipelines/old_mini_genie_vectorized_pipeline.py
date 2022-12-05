@@ -23,11 +23,11 @@ EXAMPLE_INPUT_DICT = dict(
         run_mode='genie_pick',
         # run_mode='user_pick',
         # Strategy='mini_genie_source/Strategies/RLGL_Strategy.py',
-        Strategy='New_Nate_Work/IDK_WHAT_TO_CALL_THIS_V3000_Strategy.py',
+        Strategy='mini_genie_source/Strategies/MMT_RLGL_Strategy.py',
         data_files_names=[
             # 'US_Light',
-            # 'US_Brent',
-            'XAUUSD',
+            'US_Brent',
+            # 'XAUUSD',
         ],
         # data_files_names=['OILUSD'],
         tick_size=[
@@ -42,14 +42,13 @@ EXAMPLE_INPUT_DICT = dict(
         end_date=datetime(month=10, day=13, year=2022),
         #
         Continue=True,
-        batch_size=2,
-        # batch_size=100,
+        batch_size=100,
         timer_limit=None,
         stop_after_n_epoch=10,
         # max_initial_combinations=1_000_000_000,
-        # max_initial_combinations=500_000_000,
+        max_initial_combinations=500_000_000,
         # max_initial_combinations=1_000_000,
-        max_initial_combinations=1000,
+        # max_initial_combinations=1000,
         # trading_fees=0.00005,  # 0.00005 or 0.005%, $5 per $100_000
         trading_fees=0.0001,  # 0.00005 or 0.005%, $5 per $100_000
         max_orders=1,

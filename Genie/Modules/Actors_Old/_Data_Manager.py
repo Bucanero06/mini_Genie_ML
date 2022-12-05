@@ -27,7 +27,7 @@ class Data_Manager:
         from dask import dataframe as dd
         logger.info(f'Loading {data_file_name} from CSV file')
 
-        from Genie.Modules.Utils import find_file
+        from Modules.Actors_Old.Utils import find_file
         directory = data_file_dir if data_file_dir else find_file(data_file_name, *search_in)
 
         data_file_path = f'{directory}/{data_file_name}'
@@ -50,7 +50,6 @@ class Data_Manager:
         bar_data.columns = bar_data.columns.str.lower()
         logger.info(f'Finished Loading {data_file_name} from CSV file')
         logger.info(f'Prepping {data_file_name} for use')
-        logger.info(f'_parsing dates')
         # get the name of the datetime column
         datetime_col = bar_data.columns[0]
         # parse the datetime column
@@ -58,7 +57,6 @@ class Data_Manager:
         bar_data[datetime_col] = dd.to_datetime(bar_data[datetime_col])
         # bar_data[datetime_col] = bar_data[datetime_col].dt.strftime(output_format)
         if not n_rows:
-            logger.info(f'_dask_compute')
             # compute the dask dataframe
             bar_data = bar_data.compute(scheduler=scheduler)
 
@@ -76,11 +74,11 @@ class Data_Manager:
         if not isinstance(data_file_names, list):
             data_file_names = [data_file_names]
 
-        from Modules.Utils import find_file
         data_file_paths = []
         data_array = []
 
         for file_name in data_file_names:
+            from Modules.Actors_Old.Utils import find_file
             directory = find_file(file_name, *data_file_dirs)
             __path = f'{directory}/{file_name}'
             data_file_paths.append(__path)
@@ -95,7 +93,6 @@ class Data_Manager:
                 # logger.exception(f'{e = }')
                 logger.warning(f'Could not load {file_name} as a timeseries thus is being loaded but not prepared')
                 import dask.dataframe as dd
-                from Genie.Modules.Utils import find_file
                 directory = find_file(file_name, *data_file_dirs)
                 data_file_path = f'{directory}/{file_name}'
                 data = dd.read_csv(data_file_path, parse_dates=False).compute(

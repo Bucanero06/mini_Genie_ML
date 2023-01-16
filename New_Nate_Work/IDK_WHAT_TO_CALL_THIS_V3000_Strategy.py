@@ -23,7 +23,6 @@ from mini_genie_source.Utilities.bars_utilities import BARSINCE_genie
 
 """Task: Please document as detailed yet user friendly as possible"""
 
-
 Strategy_Settings = dict(
     Strategy="MMT_RLGL_Strategy",
     _pre_cartesian_product_filter=dict(
@@ -71,25 +70,27 @@ Strategy_Settings = dict(
     ),
     strategy_user_picked_params=dict(
         output_file_name='backtest_result.csv',
-        compute_product=False,
+        compute_product=True,
+        sample_size=10000,
         read_user_defined_param_file=None,
         parameter_windows=dict(
-            rsi_timeframes=dict(type='timeframe', values=['15 min', '15 min']),
-            rsi_windows=dict(type='window', values=[41, 30]),
+            rsi_timeframes=dict(type='timeframe', values=['5 min', '30 min', '1h', '4h']),
+            rsi_windows=dict(type='window', values=np.concatenate((np.arange(start=2, stop=40, step=30),
+                                                                   np.arange(start=60, stop=100, step=30)))),
             #
-            sma_on_rsi_1_windows=dict(type='window', values=[32, 43]),
-            sma_on_rsi_2_windows=dict(type='window', values=[26, 26]),
-            sma_on_rsi_3_windows=dict(type='window', values=[15, 15]),
+            sma_on_rsi_1_windows=dict(type='window', values=np.arange(start=2, stop=50, step=30)),
+            sma_on_rsi_2_windows=dict(type='window', values=np.arange(start=5, stop=70, step=30)),
+            sma_on_rsi_3_windows=dict(type='window', values=np.arange(start=15, stop=90, step=30)),
             #
-            PEAK_and_ATR_timeframes=dict(type='timeframe', values=['5 min', '15 min']),
-            atr_windows=dict(type='window', values=[5, 7]),
-            data_lookback_windows=dict(type='window', values=[5, 9]),
-            EMAs_timeframes=dict(type='timeframe', values=['15 min', '5 min']),
-            ema_1_windows=dict(type='window', values=[27, 7]),
-            ema_2_windows=dict(type='window', values=[28, 8]),
+            PEAK_and_ATR_timeframes=dict(type='timeframe', values=['5 min', '30 min', '1h']),
+            atr_windows=dict(type='window', values=np.arange(start=3, stop=14, step=7)),
+            data_lookback_windows=dict(type='window', values=np.arange(start=3, stop=7, step=5)),
+            EMAs_timeframes=dict(type='timeframe', values=['1 min', '5 min', '15 min', '30 min']),
+            ema_1_windows=dict(type='window', values=np.arange(start=7, stop=50, step=30)),
+            ema_2_windows=dict(type='window', values=np.arange(start=20, stop=80, step=30)),
             #
-            take_profit_points=dict(type='take_profit', values=[909, 100]),
-            stop_loss_points=dict(type='stop_loss', values=[556, 1000]),
+            take_profit_points=dict(type='take_profit', values=[676, 1501, 2670, 5985, 10938]),
+            stop_loss_points=dict(type='stop_loss', values=[676, 1501, 2670, 5985, 10938]),
         )
     ),
 )
@@ -318,10 +319,6 @@ def apply_function(low_data, high_data, close_data,
     del PeakHigh, PeakLow
     auto_garbage_collect(pct=30)
 
-
-
-
-
     # print(f'long_exits: {long_exits.head(2)}')
     # print(f'long_entry_condition_1: {long_entry_condition_1.head(2)}')
     # print(f'long_entry_condition_2: {long_entry_condition_2.head(2)}')
@@ -496,5 +493,5 @@ def MMT_RLGL_Strategy(open_data, low_data, high_data, close_data, parameter_data
 
     # strategy_specific_kwargs = dict()
     return Master_Indicator.long_entries, Master_Indicator.long_exits, \
-           Master_Indicator.short_entries, Master_Indicator.short_exits, \
-           strategy_specific_kwargs
+        Master_Indicator.short_entries, Master_Indicator.short_exits, \
+        strategy_specific_kwargs

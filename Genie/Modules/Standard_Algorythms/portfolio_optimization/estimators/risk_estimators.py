@@ -1,13 +1,10 @@
 # pylint: disable=missing-module-docstring
-import warnings
 import numpy as np
 import pandas as pd
 from sklearn.neighbors import KernelDensity
 from sklearn.covariance import MinCovDet, EmpiricalCovariance, ShrunkCovariance, LedoitWolf, OAS
 from scipy.optimize import minimize
-from scipy.cluster.hierarchy import average, complete, single, dendrogram
-from matplotlib import pyplot as plt
-from Modules.portfolio_optimization.estimators.returns_estimators import ReturnsEstimators
+from Modules.portfolio_optimization.returns_estimators import ReturnsEstimators
 
 
 class RiskEstimators:
@@ -23,7 +20,7 @@ class RiskEstimators:
         Initialize
         """
 
-        pass
+        return
 
     @staticmethod
     def minimum_covariance_determinant(returns, price_data=False, assume_centered=False,
@@ -55,7 +52,19 @@ class RiskEstimators:
         :return: (np.array) Estimated robust covariance matrix.
         """
 
-        pass
+        # Calculating the series of returns from series of prices
+        if price_data:
+            # Class with returns calculation function
+            ret_est = ReturnsEstimators()
+
+            # Calculating returns
+            returns = ret_est.calculate_returns(returns)
+
+        # Calculating the covariance matrix
+        cov_matrix = MinCovDet(assume_centered=assume_centered, support_fraction=support_fraction,
+                               random_state=random_state).fit(returns).covariance_
+
+        return cov_matrix
 
     @staticmethod
     def empirical_covariance(returns, price_data=False, assume_centered=False):
@@ -83,7 +92,18 @@ class RiskEstimators:
         :return: (np.array) Estimated covariance matrix.
         """
 
-        pass
+        # Calculating the series of returns from series of prices
+        if price_data:
+            # Class with returns calculation function
+            ret_est = ReturnsEstimators()
+
+            # Calculating returns
+            returns = ret_est.calculate_returns(returns)
+
+        # Calculating the covariance matrix
+        cov_matrix = EmpiricalCovariance(assume_centered=assume_centered).fit(returns).covariance_
+
+        return cov_matrix
 
     @staticmethod
     def shrinked_covariance(returns, price_data=False, shrinkage_type='basic', assume_centered=False,
@@ -116,7 +136,29 @@ class RiskEstimators:
         :return: (np.array) Estimated covariance matrix. Tuple of covariance matrices if shrinkage_type = ``all``.
         """
 
-        pass
+        # Calculating the series of returns from series of prices
+        if price_data:
+            # Class with returns calculation function
+            ret_est = ReturnsEstimators()
+
+            # Calculating returns
+            returns = ret_est.calculate_returns(returns)
+
+        # Calculating the covariance matrix for the chosen method
+        if shrinkage_type == 'basic':
+            cov_matrix = ShrunkCovariance(assume_centered=assume_centered, shrinkage=basic_shrinkage).fit(
+                returns).covariance_
+        elif shrinkage_type == 'lw':
+            cov_matrix = LedoitWolf(assume_centered=assume_centered).fit(returns).covariance_
+        elif shrinkage_type == 'oas':
+            cov_matrix = OAS(assume_centered=assume_centered).fit(returns).covariance_
+        else:
+            cov_matrix = (
+                ShrunkCovariance(assume_centered=assume_centered, shrinkage=basic_shrinkage).fit(returns).covariance_,
+                LedoitWolf(assume_centered=assume_centered).fit(returns).covariance_,
+                OAS(assume_centered=assume_centered).fit(returns).covariance_)
+
+        return cov_matrix
 
     @staticmethod
     def semi_covariance(returns, price_data=False, threshold_return=0):
@@ -138,7 +180,40 @@ class RiskEstimators:
         :return: (np.array) Semi-Covariance matrix.
         """
 
-        pass
+        # Calculating the series of returns from series of prices
+        if price_data:
+            # Class with returns calculation function
+            ret_est = ReturnsEstimators()
+
+            # Calculating returns
+            returns = ret_est.calculate_returns(returns)
+
+        # Returns that are lower than the threshold
+        lower_returns = returns - threshold_return < 0
+
+        # Calculating the minimum of 0 and returns minus threshold
+        min_returns = (returns - threshold_return) * lower_returns
+
+        # Simple covariance matrix
+        semi_covariance = returns.cov()
+
+        # Iterating to fill elements
+        for row_number in range(semi_covariance.shape[0]):
+            for column_number in range(semi_covariance.shape[1]):
+                # Series of returns for the element from the row and column
+                row_asset = min_returns.iloc[:, row_number]
+                column_asset = min_returns.iloc[:, column_number]
+
+                # Series of element-wise products
+                covariance_series = row_asset * column_asset
+
+                # Element of the Semi-Covariance matrix
+                semi_cov_element = covariance_series.sum() / min_returns.size
+
+                # Inserting the element in the Semi-Covariance matrix
+                semi_covariance.iloc[row_number, column_number] = semi_cov_element
+
+        return semi_covariance
 
     @staticmethod
     def exponential_covariance(returns, price_data=False, window_span=60):
@@ -158,30 +233,34 @@ class RiskEstimators:
         :return: (np.array) Exponentially-weighted Covariance matrix.
         """
 
-        pass
+        # Calculating the series of returns from series of prices
+        if price_data:
+            # Class with returns calculation function
+            ret_est = ReturnsEstimators()
 
-    @staticmethod
-    def filter_corr_hierarchical(cor_matrix, method='complete', draw_plot=False):
-        """
-        Creates a filtered correlation matrix using hierarchical clustering methods from an empirical
-        correlation matrix, given that all values are non-negative [0 ~ 1]
-        This function allows for three types of hierarchical clustering - complete, single, and average
-        linkage clusters. Link to hierarchical clustering methods documentation:
-        `<https://docs.scipy.org/doc/scipy/reference/generated/scipy.cluster.hierarchy.linkage.html>`_
-        It works as follows:
-        First, the method creates a hierarchical clustering tree using scipy's hierarchical clustering methods
-        from the empirical 2-D correlation matrix.
-        Second, it extracts and stores each cluster's filtered value (alpha) and assigns it to it's corresponding leaf.
-        Finally, we create a new filtered matrix by assigning each of the correlations to their corresponding
-        parent node's alpha value.
-        
-        :param cor_matrix: (np.array) Numpy array of an empirical correlation matrix.
-        :param method: (str) Hierarchical clustering method to use. (``complete`` by default, ``single``, ``average``)
-        :param draw_plot: (bool) Plots the hierarchical cluster tree. (False by default)
-        :return: (np.array) The filtered correlation matrix.
-        """
+            # Calculating returns
+            returns = ret_est.calculate_returns(returns)
 
-        pass
+        # Simple covariance matrix
+        cov_matrix = returns.cov()
+
+        # Iterating to fill elements
+        for row_number in range(cov_matrix.shape[0]):
+            for column_number in range(cov_matrix.shape[1]):
+                # Series of returns for the element from the row and column
+                row_asset = returns.iloc[:, row_number]
+                column_asset = returns.iloc[:, column_number]
+
+                # Series of covariance
+                covariance_series = (row_asset - row_asset.mean()) * (column_asset - column_asset.mean())
+
+                # Exponentially weighted moving average series
+                ew_ma = covariance_series.ewm(span=window_span).mean()
+
+                # Using the most current element as the Exponential Covariance value
+                cov_matrix.iloc[row_number, column_number] = ew_ma[-1]
+
+        return cov_matrix
 
     def denoise_covariance(self, cov, tn_relation, denoise_method='const_resid_eigen', detone=False,
                            market_component=1, kde_bwidth=0.01, alpha=0):
@@ -190,8 +269,7 @@ class RiskEstimators:
 
         Two denoising methods are supported:
         1. Constant Residual Eigenvalue Method (``const_resid_eigen``)
-        2. Spectral Method (``spectral``)
-        3. Targeted Shrinkage Method (``target_shrink``)
+        2. Targeted Shrinkage Method (``target_shrink``)
 
         The Constant Residual Eigenvalue Method works as follows:
 
@@ -211,10 +289,6 @@ class RiskEstimators:
         the maximum theoretical eigenvalue are set to their average value. This is how the eigenvalues
         associated with noise are shrinked. The de-noised covariance matrix is then calculated back
         from new eigenvalues and eigenvectors.
-
-        The Spectral Method works just like the Constant Residual Eigenvalue Method, but instead of replacing
-        eigenvalues lower than the maximum theoretical eigenvalue to their average value, they are replaced with
-        zero instead.
 
         The Targeted Shrinkage Method works as follows:
 
@@ -245,9 +319,37 @@ class RiskEstimators:
         :param alpha: (float) In range (0 to 1) - shrinkage of the noise correlation matrix to use in the
                               Targeted Shrinkage Method. (0 by default)
         :return: (np.array) De-noised covariance matrix or correlation matrix.
+
         """
 
-        pass
+        # Correlation matrix computation (if correlation matrix given, nothing changes)
+        corr = self.cov_to_corr(cov)
+
+        # Calculating eigenvalues and eigenvectors
+        eigenval, eigenvec = self._get_pca(corr)
+
+        # Calculating the maximum eigenvalue to fit the theoretical distribution
+        maximum_eigen, _ = self._find_max_eval(np.diag(eigenval), tn_relation, kde_bwidth)
+
+        # Calculating the threshold of eigenvalues that fit the theoretical distribution
+        # from our set of eigenvalues
+        num_facts = eigenval.shape[0] - np.diag(eigenval)[::-1].searchsorted(maximum_eigen)
+
+        if denoise_method == 'target_shrink':
+            # Based on the threshold, de-noising the correlation matrix
+            corr = self._denoised_corr_targ_shrink(eigenval, eigenvec, num_facts, alpha)
+        else: # Default const_resid_eigen method
+            # Based on the threshold, de-noising the correlation matrix
+            corr = self._denoised_corr(eigenval, eigenvec, num_facts)
+
+        # Detone the correlation matrix if needed
+        if detone:
+            corr = self._detoned_corr(corr, eigenval, eigenvec, num_facts, market_component)
+
+        # Calculating the covariance matrix from the de-noised correlation matrix
+        cov_denoised = self.corr_to_cov(corr, np.diag(cov) ** (1 / 2))
+
+        return cov_denoised
 
     @staticmethod
     def corr_to_cov(corr, std):
@@ -264,7 +366,8 @@ class RiskEstimators:
         :return: (np.array) Covariance matrix.
         """
 
-        pass
+        cov = corr * np.outer(std, std)
+        return cov
 
     @staticmethod
     def cov_to_corr(cov):
@@ -277,17 +380,16 @@ class RiskEstimators:
         :return: (np.array) Covariance matrix.
         """
 
-        pass
+        # Calculating standard deviations of the elements
+        std = np.sqrt(np.diag(cov))
 
-    @staticmethod
-    def is_matrix_invertible(matrix):
-        """
-        Check if a matrix is invertible or not.
-        :param matrix: (Numpy matrix) A matrix whose invertibility we want to check.
-        :return: (bool) Boolean value depending on whether the matrix is invertible or not.
-        """
+        # Transforming to correlation matrix
+        corr = cov / np.outer(std, std)
 
-        pass
+        # Making sure correlation coefficients are in (-1, 1) range
+        corr[corr < -1], corr[corr > 1] = -1, 1
+
+        return corr
 
     @staticmethod
     def _fit_kde(observations, kde_bwidth=0.01, kde_kernel='gaussian', eval_points=None):
@@ -307,7 +409,27 @@ class RiskEstimators:
         :return: (pd.Series) Series with estimated pdf values in the eval_points.
         """
 
-        pass
+        # Reshaping array to a vertical one
+        observations = observations.reshape(-1, 1)
+
+        # Estimating Kernel Density of the empirical distribution of eigenvalues
+        kde = KernelDensity(kernel=kde_kernel, bandwidth=kde_bwidth).fit(observations)
+
+        # If no specific values provided, the fit KDE will be valued on unique eigenvalues.
+        if eval_points is None:
+            eval_points = np.unique(observations).reshape(-1, 1)
+
+        # If the input vector is one-dimensional, reshaping to a vertical one
+        if len(eval_points.shape) == 1:
+            eval_points = eval_points.reshape(-1, 1)
+
+        # Evaluating the log density model on the given values
+        log_prob = kde.score_samples(eval_points)
+
+        # Preparing the output of pdf values
+        pdf = pd.Series(np.exp(log_prob), index=eval_points.flatten())
+
+        return pdf
 
     @staticmethod
     def _mp_pdf(var, tn_relation, num_points):
@@ -324,7 +446,23 @@ class RiskEstimators:
         :return: (pd.Series) Series of M-P pdf values.
         """
 
-        pass
+        # Changing the type as scipy.optimize.minimize outputs np.array with one element to this function
+        if not isinstance(var, float):
+            var = float(var)
+
+        # Minimum and maximum expected eigenvalues
+        eigen_min = var * (1 - (1 / tn_relation) ** (1 / 2)) ** 2
+        eigen_max = var * (1 + (1 / tn_relation) ** (1 / 2)) ** 2
+
+        # Space of eigenvalues
+        eigen_space = np.linspace(eigen_min, eigen_max, num_points)
+
+        # Marcenko-Pastur probability density function for eigen_space
+        pdf = tn_relation * ((eigen_max - eigen_space) * (eigen_space - eigen_min)) ** (1 / 2) / \
+                             (2 * np.pi * var * eigen_space)
+        pdf = pd.Series(pdf, index=eigen_space)
+
+        return pdf
 
     def _pdf_fit(self, var, eigen_observations, tn_relation, kde_bwidth, num_points=1000):
         """
@@ -341,7 +479,15 @@ class RiskEstimators:
         :param num_points: (int) Number of points to estimate pdf. (for the empirical pdf, 1000 by default)
         :return: (float) SSE between empirical pdf and theoretical pdf.
         """
-        pass
+
+        # Calculating theoretical and empirical pdf
+        theoretical_pdf = self._mp_pdf(var, tn_relation, num_points)
+        empirical_pdf = self._fit_kde(eigen_observations, kde_bwidth, eval_points=theoretical_pdf.index.values)
+
+        # Fit calculation
+        sse = np.sum((empirical_pdf - theoretical_pdf) ** 2)
+
+        return sse
 
     def _find_max_eval(self, eigen_observations, tn_relation, kde_bwidth):
         """
@@ -356,7 +502,17 @@ class RiskEstimators:
         :return: (float, float) Maximum random eigenvalue, optimal variation of the Marcenko-Pastur distribution.
         """
 
-        pass
+        # Searching for the variation of Marcenko-Pastur distribution for the best fit with the empirical distribution
+        optimization = minimize(self._pdf_fit, x0=np.array(0.5), args=(eigen_observations, tn_relation, kde_bwidth),
+                                bounds=((1e-5, 1 - 1e-5),))
+
+        # The optimal solution found
+        var = optimization['x'][0]
+
+        # Eigenvalue calculated as the maximum expected eigenvalue based on the input
+        maximum_eigen = var * (1 + (1 / tn_relation) ** (1 / 2)) ** 2
+
+        return maximum_eigen, var
 
     @staticmethod
     def _get_pca(hermit_matrix):
@@ -371,7 +527,20 @@ class RiskEstimators:
         :return: (np.array, np.array) Eigenvalues matrix, eigenvectors array.
         """
 
-        pass
+        # Calculating eigenvalues and eigenvectors
+        eigenvalues, eigenvectors = np.linalg.eigh(hermit_matrix)
+
+        # Index to sort eigenvalues in descending order
+        indices = eigenvalues.argsort()[::-1]
+
+        # Sorting
+        eigenvalues = eigenvalues[indices]
+        eigenvectors = eigenvectors[:, indices]
+
+        # Outputting eigenvalues on the main diagonal of a matrix
+        eigenvalues = np.diagflat(eigenvalues)
+
+        return eigenvalues, eigenvectors
 
     def _denoised_corr(self, eigenvalues, eigenvectors, num_facts):
         """
@@ -392,7 +561,22 @@ class RiskEstimators:
         :return: (np.array) De-noised correlation matrix.
         """
 
-        pass
+        # Vector of eigenvalues from the main diagonal of a matrix
+        eigenval_vec = np.diag(eigenvalues).copy()
+
+        # Replacing eigenvalues after num_facts to their average value
+        eigenval_vec[num_facts:] = eigenval_vec[num_facts:].sum() / float(eigenval_vec.shape[0] - num_facts)
+
+        # Back to eigenvalues on main diagonal of a matrix
+        eigenvalues = np.diag(eigenval_vec)
+
+        # De-noised correlation matrix
+        corr = np.dot(eigenvectors, eigenvalues).dot(eigenvectors.T)
+
+        # Rescaling the correlation matrix to have 1s on the main diagonal
+        corr = self.cov_to_corr(corr)
+
+        return corr
 
     @staticmethod
     def _denoised_corr_targ_shrink(eigenvalues, eigenvectors, num_facts, alpha=0):
@@ -415,9 +599,26 @@ class RiskEstimators:
         :return: (np.array) De-noised correlation matrix.
         """
 
-        pass
+        # Getting the eigenvalues and eigenvectors related to signal
+        eigenvalues_signal = eigenvalues[:num_facts, :num_facts]
+        eigenvectors_signal = eigenvectors[:, :num_facts]
 
-    def _detoned_corr(self, corr, market_component=1):
+        # Getting the eigenvalues and eigenvectors related to noise
+        eigenvalues_noise = eigenvalues[num_facts:, num_facts:]
+        eigenvectors_noise = eigenvectors[:, num_facts:]
+
+        # Calculating the correlation matrix from eigenvalues associated with signal
+        corr_signal = np.dot(eigenvectors_signal, eigenvalues_signal).dot(eigenvectors_signal.T)
+
+        # Calculating the correlation matrix from eigenvalues associated with noise
+        corr_noise = np.dot(eigenvectors_noise, eigenvalues_noise).dot(eigenvectors_noise.T)
+
+        # Calculating the De-noised correlation matrix
+        corr = corr_signal + alpha * corr_noise + (1 - alpha) * np.diag(np.diag(corr_noise))
+
+        return corr
+
+    def _detoned_corr(self, corr, eigenvalues, eigenvectors, num_facts, market_component=1):
         """
         De-tones the correlation matrix by removing the market component.
 
@@ -426,26 +627,27 @@ class RiskEstimators:
         eigenvectors related to a market component.
 
         :param corr: (np.array) Correlation matrix to detone.
+        :param eigenvalues: (np.array) Matrix with eigenvalues on the main diagonal.
+        :param eigenvectors: (float) Eigenvectors array.
+        :param num_facts: (float) Threshold for eigenvalues to be fixed.
         :param market_component: (int) Number of fist eigevectors related to a market component. (1 by default)
         :return: (np.array) De-toned correlation matrix.
         """
 
-        pass
+        # Getting the de-noised correlation matrix
+        corr = self._denoised_corr(eigenvalues, eigenvectors, num_facts)
 
-    def _denoised_corr_spectral(self, eigenvalues, eigenvectors, num_facts):
-        """
-        De-noises the correlation matrix using the Spectral method.
-        The input is the eigenvalues and the eigenvectors of the correlation matrix and the number
-        of the first eigenvalue that is below the maximum theoretical eigenvalue.
-        De-noising is done by shrinking the eigenvalues associated with noise (the eigenvalues lower than
-        the maximum theoretical eigenvalue are set to zero, preserving the trace of the
-        correlation matrix).
-        The result is the de-noised correlation matrix.
+        # Getting the eigenvalues and eigenvectors related to market component
+        eigenvalues_mark = eigenvalues[:market_component, :market_component]
+        eigenvectors_mark = eigenvectors[:, :market_component]
 
-        :param eigenvalues: (np.array) Matrix with eigenvalues on the main diagonal.
-        :param eigenvectors: (float) Eigenvectors array.
-        :param num_facts: (float) Threshold for eigenvalues to be fixed.
-        :return: (np.array) De-noised correlation matrix.
-        """
+        # Calculating the market component correlation
+        corr_mark = np.dot(eigenvectors_mark, eigenvalues_mark).dot(eigenvectors_mark.T)
 
-        pass
+        # Removing the market component from the de-noised correlation matrix
+        corr = corr - corr_mark
+
+        # Rescaling the correlation matrix to have 1s on the main diagonal
+        corr = self.cov_to_corr(corr)
+
+        return corr

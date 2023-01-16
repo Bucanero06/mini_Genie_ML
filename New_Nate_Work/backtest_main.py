@@ -17,11 +17,11 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 EXAMPLE_INPUT_DICT = dict(
     Genie=dict(
         # study_name='US_Light_debugging_study',
-        # study_name='XAUUSD_debugging_study',
-        study_name='US_Brent_debugging_study',
+        study_name='XAUUSD_debugging_study',
+        # study_name='US_Brent_debugging_study',
         # study_name='ray_debugging_study',
-        run_mode='genie_pick',
-        # run_mode='user_pick',
+        # run_mode='genie_pick',
+        run_mode='user_pick',
         # Strategy='mini_genie_source/Strategies/RLGL_Strategy.py',
         Strategy='New_Nate_Work/IDK_WHAT_TO_CALL_THIS_V3000_Strategy.py',
         data_files_names=[
@@ -38,7 +38,6 @@ EXAMPLE_INPUT_DICT = dict(
         init_cash=1_000_000,
         size=100_000,
         start_date=datetime(month=1, day=3, year=2021),  # Give 90 days to [warmup candles]/[train]
-        # start_date=datetime(month=4, day=3, year=2022),  # Give 90 days to [warmup candles]/[train]
         end_date=datetime(month=10, day=13, year=2022),
         #
         Continue=True,

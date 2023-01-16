@@ -3,8 +3,9 @@ import numpy as np
 import pandas as pd
 from scipy.cluster.hierarchy import linkage as scipy_linkage, dendrogram
 from scipy.spatial.distance import squareform
-from Modules.portfolio_optimization.estimators import ReturnsEstimators, RiskEstimators
-from Modules.portfolio_optimization.utils import RiskMetrics
+from Modules.portfolio_optimization.returns_estimators import ReturnsEstimators
+from Modules.portfolio_optimization.risk_metrics import RiskMetrics
+from Modules.portfolio_optimization.risk_estimators import RiskEstimators
 
 
 class HierarchicalRiskParity:
@@ -22,8 +23,14 @@ class HierarchicalRiskParity:
     """
 
     def __init__(self):
-
-        pass
+        self.weights = list()
+        self.seriated_distances = None
+        self.seriated_correlations = None
+        self.ordered_indices = None
+        self.clusters = None
+        self.returns_estimator = ReturnsEstimators()
+        self.risk_metrics = RiskMetrics()
+        self.risk_estimator = RiskEstimators()
 
     def allocate(self,
                  asset_names=None,
@@ -49,7 +56,51 @@ class HierarchicalRiskParity:
                                  ``average``, ``complete``, ``ward``.
         """
 
-        pass
+        # Perform error checks
+        self._error_checks(asset_prices, asset_returns, covariance_matrix)
+
+        if asset_names is None:
+            if asset_prices is not None:
+                asset_names = asset_prices.columns
+            elif asset_returns is not None and isinstance(asset_returns, pd.DataFrame):
+                asset_names = asset_returns.columns
+            else:
+                raise ValueError("Please provide a list of asset names")
+
+        # Calculate the returns if the user does not supply a returns dataframe
+        if asset_returns is None and covariance_matrix is None:
+            asset_returns = self.returns_estimator.calculate_returns(asset_prices=asset_prices)
+        asset_returns = pd.DataFrame(asset_returns, columns=asset_names)
+
+        # Calculate covariance of returns or use the user specified covariance matrix
+        if covariance_matrix is None:
+            covariance_matrix = asset_returns.cov()
+        covariance_matrix = pd.DataFrame(covariance_matrix, index=asset_names, columns=asset_names)
+
+        # Calculate correlation and distance from covariance matrix
+        correlation_matrix = self.risk_estimator.cov_to_corr(covariance_matrix)
+        if distance_matrix is None:
+            distance_matrix = np.sqrt((1 - correlation_matrix).round(5) / 2)
+        distance_matrix = pd.DataFrame(distance_matrix, index=asset_names, columns=asset_names)
+
+        # Step-1: Tree Clustering
+        self.clusters = self._tree_clustering(distance=distance_matrix, method=linkage)
+
+        # Step-2: Quasi Diagnalization
+        num_assets = len(asset_names)
+        self.ordered_indices = self._quasi_diagnalization(num_assets, 2 * num_assets - 2)
+        self.seriated_distances, self.seriated_correlations = self._get_seriated_matrix(assets=asset_names,
+                                                                                        distance=distance_matrix,
+                                                                                        correlation=correlation_matrix)
+
+        # Step-3: Recursive Bisection
+        self._recursive_bisection(covariance=covariance_matrix, assets=asset_names)
+
+        # Build Long/Short portfolio
+        if side_weights is None:
+            side_weights = pd.Series([1] * num_assets, index=asset_names)
+        side_weights = pd.Series(side_weights, index=asset_names)
+        self._build_long_short_portfolio(side_weights)
 
     def plot_clusters(self, assets):
         """
@@ -59,19 +110,8 @@ class HierarchicalRiskParity:
         :return: (dict) Dendrogram
         """
 
-
-        pass
-
-    def _nan_and_diagonal_checks(matrix, nan_fill_value=0, diagonal_fill_value=None):
-        """
-        Check for any NaN values in the matrix and discrepancies in the diagonal values.
-        :param matrix: (pd.DataFrame) The matrix which needs to be processed.
-        :param nan_fill_value: (float) Replacement value for NaNs
-        :param diagonal_fill_value: (float) The values to use for filling the diagonal.
-        :return: (pd.DataFrame) Processed matrix.
-        """
-
-        pass
+        dendrogram_plot = dendrogram(self.clusters, labels=assets)
+        return dendrogram_plot
 
     @staticmethod
     def _tree_clustering(distance, method='single'):
@@ -83,8 +123,8 @@ class HierarchicalRiskParity:
         :return: (np.array) Distance matrix and clusters
         """
 
-
-        pass
+        clusters = scipy_linkage(squareform(distance.values), method=method)
+        return clusters
 
     def _quasi_diagnalization(self, num_assets, curr_index):
         """
@@ -95,8 +135,13 @@ class HierarchicalRiskParity:
         :return: (list) The assets rearranged according to hierarchical clustering
         """
 
+        if curr_index < num_assets:
+            return [curr_index]
 
-        pass
+        left = int(self.clusters[curr_index - num_assets, 0])
+        right = int(self.clusters[curr_index - num_assets, 1])
+
+        return (self._quasi_diagnalization(num_assets, left) + self._quasi_diagnalization(num_assets, right))
 
     def _get_seriated_matrix(self, assets, distance, correlation):
         """
@@ -109,7 +154,10 @@ class HierarchicalRiskParity:
         :return: (np.array) Re-arranged distance matrix based on tree clusters
         """
 
-        pass
+        ordering = assets[self.ordered_indices]
+        seriated_distances = distance.loc[ordering, ordering]
+        seriated_correlations = correlation.loc[ordering, ordering]
+        return seriated_distances, seriated_correlations
 
     def _build_long_short_portfolio(self, side_weights):
         """
@@ -119,7 +167,17 @@ class HierarchicalRiskParity:
                                                       (default 1 for all)
         """
 
-        pass
+        short_ptf = side_weights[side_weights == -1].index
+        buy_ptf = side_weights[side_weights == 1].index
+        if len(short_ptf) > 0:
+            # Short half size
+            self.weights.loc[short_ptf] /= self.weights.loc[short_ptf].sum().values[0]
+            self.weights.loc[short_ptf] *= -0.5
+
+            # Buy other half
+            self.weights.loc[buy_ptf] /= self.weights.loc[buy_ptf].sum().values[0]
+            self.weights.loc[buy_ptf] *= 0.5
+        self.weights = self.weights.T
 
     @staticmethod
     def _get_inverse_variance_weights(covariance):
@@ -130,7 +188,9 @@ class HierarchicalRiskParity:
         :return: (list) Inverse variance weight values
         """
 
-        pass
+        inv_diag = 1 / np.diag(covariance.values)
+        parity_w = inv_diag * (1 / np.sum(inv_diag))
+        return parity_w
 
     def _get_cluster_variance(self, covariance, cluster_indices):
         """
@@ -141,7 +201,10 @@ class HierarchicalRiskParity:
         :return: (float) Variance of the cluster
         """
 
-        pass
+        cluster_covariance = covariance.iloc[cluster_indices, cluster_indices]
+        parity_w = self._get_inverse_variance_weights(cluster_covariance)
+        cluster_variance = self.risk_metrics.calculate_variance(covariance=cluster_covariance, weights=parity_w)
+        return cluster_variance
 
     def _recursive_bisection(self, covariance, assets):
         """
@@ -150,8 +213,31 @@ class HierarchicalRiskParity:
         :param covariance: (pd.Dataframe) The covariance matrix
         :param assets: (list) Asset names in the portfolio
         """
+        self.weights = pd.Series(1, index=self.ordered_indices)
+        clustered_alphas = [self.ordered_indices]
 
-        pass
+        while clustered_alphas:
+            clustered_alphas = [cluster[start:end]
+                                for cluster in clustered_alphas
+                                for start, end in ((0, len(cluster) // 2), (len(cluster) // 2, len(cluster)))
+                                if len(cluster) > 1]
+
+            for subcluster in range(0, len(clustered_alphas), 2):
+                left_cluster = clustered_alphas[subcluster]
+                right_cluster = clustered_alphas[subcluster + 1]
+
+                # Get left and right cluster variances and calculate allocation factor
+                left_cluster_variance = self._get_cluster_variance(covariance, left_cluster)
+                right_cluster_variance = self._get_cluster_variance(covariance, right_cluster)
+                alloc_factor = 1 - left_cluster_variance / (left_cluster_variance + right_cluster_variance)
+
+                # Assign weights to each sub-cluster
+                self.weights[left_cluster] *= alloc_factor
+                self.weights[right_cluster] *= 1 - alloc_factor
+
+        # Assign actual asset values to weight index
+        self.weights.index = assets[self.ordered_indices]
+        self.weights = pd.DataFrame(self.weights)
 
     @staticmethod
     def _error_checks(asset_prices, asset_returns, covariance_matrix):
@@ -164,4 +250,13 @@ class HierarchicalRiskParity:
         :param covariance_matrix: (pd.Dataframe/numpy matrix) User supplied covariance matrix of asset returns
         """
 
-        pass
+
+        if asset_prices is None and asset_returns is None and covariance_matrix is None:
+            raise ValueError(
+                "You need to supply either raw prices or returns or a covariance matrix of asset returns")
+
+        if asset_prices is not None:
+            if not isinstance(asset_prices, pd.DataFrame):
+                raise ValueError("Asset prices matrix must be a dataframe")
+            if not isinstance(asset_prices.index, pd.DatetimeIndex):
+                raise ValueError("Asset prices dataframe must be indexed by date.")

@@ -8,6 +8,7 @@ import psutil
 
 from mini_genie_source.Utilities import _typing as tp
 from logger_tt import logger
+import numpy as np
 
 """Expression Handler"""
 
@@ -34,6 +35,13 @@ def multiline_eval(expr: str, context: tp.KwargsLike = None) -> tp.Any:
     exec(compile(exec_expr, "file", "exec"), context)
     return eval(compile(eval_expr, "file", "eval"), context)
 
+"""Array Handler"""
+
+
+def randomly_sample_from_2d(arr, sample_size, replace=False):
+
+    arr = np.array(arr)
+    return arr[np.random.choice(arr.shape[0], sample_size, replace=replace)]
 
 """Data Handler"""
 

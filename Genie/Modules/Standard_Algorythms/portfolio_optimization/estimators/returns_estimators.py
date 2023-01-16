@@ -13,8 +13,7 @@ class ReturnsEstimators:
         Initialize
         """
 
-
-        pass
+        return
 
     @staticmethod
     def calculate_mean_historical_returns(asset_prices, resample_by=None, frequency=252):
@@ -27,7 +26,12 @@ class ReturnsEstimators:
         :return: (pd.Series) Annualized mean historical returns per asset
         """
 
-        pass
+        # Resample the asset prices
+        if resample_by:
+            asset_prices = asset_prices.resample(resample_by).last()
+        returns = asset_prices.pct_change().dropna(how="all")
+        returns = returns.mean() * frequency
+        return returns
 
     @staticmethod
     def calculate_exponential_historical_returns(asset_prices, resample_by=None, frequency=252, span=500):
@@ -42,7 +46,12 @@ class ReturnsEstimators:
         :return: (pd.Series) Exponentially-weighted mean of historical returns
         """
 
-        pass
+        # Resample the asset prices
+        if resample_by:
+            asset_prices = asset_prices.resample(resample_by).last()
+        returns = asset_prices.pct_change().dropna(how="all")
+        returns = returns.ewm(span=span).mean().iloc[-1] * frequency
+        return returns
 
     @staticmethod
     def calculate_returns(asset_prices, resample_by=None):
@@ -54,4 +63,8 @@ class ReturnsEstimators:
         :return: (pd.DataFrame) Returns per asset
         """
 
-        pass
+        if resample_by:
+            asset_prices = asset_prices.resample(resample_by).last()
+        asset_returns = asset_prices.pct_change()
+        asset_returns = asset_returns.dropna(how='all')
+        return asset_returns

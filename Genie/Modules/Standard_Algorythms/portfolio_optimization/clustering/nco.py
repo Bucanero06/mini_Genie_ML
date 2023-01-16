@@ -1,15 +1,14 @@
 # pylint: disable=missing-module-docstring
-from math import ceil
 import numpy as np
 import pandas as pd
 from sklearn.covariance import LedoitWolf
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_samples
 from scipy.linalg import block_diag
-from Modules.portfolio_optimization.estimators import RiskEstimators
+from Modules.portfolio_optimization.risk_estimators import RiskEstimators
 
 
-class NestedClusteredOptimisation:
+class NCO:
     """
     This class implements the Nested Clustered Optimization (NCO) algorithm, the Convex Optimization Solution (CVO),
     the  Monte Carlo Optimization Selection (MCOS) algorithm and sample data generating function. It is reproduced with
@@ -22,10 +21,10 @@ class NestedClusteredOptimisation:
         Initialize
         """
 
+        return
 
-        pass
-
-    def allocate_cvo(self, cov, mu_vec=None):
+    @staticmethod
+    def allocate_cvo(cov, mu_vec=None):
         """
         Estimates the Convex Optimization Solution (CVO).
 
@@ -41,7 +40,20 @@ class NestedClusteredOptimisation:
         :return: (np.array) Weights for optimal allocation.
         """
 
-        pass
+        # Calculating the inverse covariance matrix
+        inv_cov = np.linalg.inv(cov)
+
+        # Generating a vector of size of the inverted covariance matrix
+        ones = np.ones(shape=(inv_cov.shape[0], 1))
+
+        if mu_vec is None:  # To output the minimum variance portfolio
+            mu_vec = ones
+
+        # Calculating the analytical solution using CVO - weights
+        w_cvo = np.dot(inv_cov, mu_vec)
+        w_cvo /= np.dot(mu_vec.T, w_cvo)
+
+        return w_cvo
 
     def allocate_nco(self, cov, mu_vec=None, max_num_clusters=None, n_init=10):
         """
@@ -69,7 +81,48 @@ class NestedClusteredOptimisation:
         :return: (np.array) Optimal allocation using the NCO algorithm.
         """
 
-        pass
+        # Using pd.DataFrame instead of np.array
+        cov = pd.DataFrame(cov)
+
+        # Optimal solution for minimum variance
+        if mu_vec is not None:
+            mu_vec = pd.Series(mu_vec[:, 0])
+
+        # Class with function to calculate correlation from covariance function
+        risk_estimators = RiskEstimators()
+
+        # Calculating correlation matrix
+        corr = risk_estimators.cov_to_corr(cov)
+
+        # Optimal partition of clusters (step 1)
+        corr, clusters, _ = self._cluster_kmeans_base(corr, max_num_clusters, n_init=n_init)
+
+        # Weights inside clusters
+        w_intra_clusters = pd.DataFrame(0, index=cov.index, columns=clusters.keys())
+
+        # Iterating over clusters
+        for i in clusters:
+            # Covariance matrix of elements in cluster
+            cov_cluster = cov.loc[clusters[i], clusters[i]].values
+
+            # Optimal solution vector for the cluster
+            mu_cluster = (None if mu_vec is None else mu_vec.loc[clusters[i]].values.reshape(-1, 1))
+
+            # Estimating the Convex Optimization Solution in a cluster (step 2)
+            w_intra_clusters.loc[clusters[i], i] = self.allocate_cvo(cov_cluster, mu_cluster).flatten()
+
+        # Reducing new covariance matrix to calculate inter-cluster weights
+        cov_inter_cluster = w_intra_clusters.T.dot(np.dot(cov, w_intra_clusters))
+        mu_inter_cluster = (None if mu_vec is None else w_intra_clusters.T.dot(mu_vec))
+
+        # Optimal allocations across the reduced covariance matrix (step 3)
+        w_inter_clusters = pd.Series(self.allocate_cvo(cov_inter_cluster, mu_inter_cluster).flatten(),
+                                     index=cov_inter_cluster.index)
+
+        # Final allocations - dot-product of the intra-cluster and inter-cluster allocations (step 4)
+        w_nco = w_intra_clusters.mul(w_inter_clusters, axis=1).sum(axis=1).values.reshape(-1, 1)
+
+        return w_nco
 
     def allocate_mcos(self, mu_vec, cov, num_obs, num_sims=100, kde_bwidth=0.01, min_var_portf=True, lw_shrinkage=False):
         """
@@ -91,7 +144,33 @@ class NestedClusteredOptimisation:
         :return: (pd.DataFrame, pd.DataFrame) DataFrames with allocations for CVO and NCO algorithms.
         """
 
-        pass
+        # Creating DataFrames for CVO results and NCO results
+        w_cvo = pd.DataFrame(columns=range(cov.shape[0]), index=range(num_sims), dtype=float)
+        w_nco = w_cvo.copy(deep=True)
+
+        # Iterating thorough simulations
+        for simulation in range(num_sims):
+            # Deriving empirical vector of means and an empirical covariance matrix
+            mu_simulation, cov_simulation = self._simulate_covariance(mu_vec, cov, num_obs, lw_shrinkage)
+
+            # If goal is minimum variance
+            if min_var_portf:
+                mu_simulation = None
+
+            # Class with de-noising function
+            risk_estimators = RiskEstimators()
+
+            # De-noising covariance matrix
+            if kde_bwidth > 0:
+                cov_simulation = risk_estimators.denoise_covariance(cov_simulation, num_obs / cov_simulation.shape[1],
+                                                                    kde_bwidth)
+
+            # Writing the results to corresponding dataframes
+            w_cvo.loc[simulation] = self.allocate_cvo(cov_simulation, mu_simulation).flatten()
+            w_nco.loc[simulation] = self.allocate_nco(cov_simulation, mu_simulation,
+                                                      int(cov_simulation.shape[0] / 2)).flatten()
+
+        return w_cvo, w_nco
 
     def estim_errors_mcos(self, w_cvo, w_nco, mu_vec, cov, min_var_portf=True):
         """
@@ -109,7 +188,17 @@ class NestedClusteredOptimisation:
         :return: (float, float) Mean standard deviation of weights for CVO and NCO algorithms.
         """
 
-        pass
+        # Calculating the true optimal weights allocation
+        w_true = self.allocate_cvo(cov, None if min_var_portf else mu_vec)
+        w_true = np.repeat(w_true.T, w_cvo.shape[0], axis=0)
+
+        # Mean standard deviation between the weights from CVO algorithm and the true weights
+        err_cvo = (w_cvo - w_true).std(axis=0).mean()
+
+        # Mean standard deviation between the weights from NCO algorithm and the true weights
+        err_nco = (w_nco - w_true).std(axis=0).mean()
+
+        return err_cvo, err_nco
 
     @staticmethod
     def _simulate_covariance(mu_vector, cov_matrix, num_obs, lw_shrinkage=False):
@@ -128,7 +217,19 @@ class NestedClusteredOptimisation:
         :return: (np.array, np.array) Empirical means vector, empirical covariance matrix
         """
 
-        pass
+        # Generating a matrix of num_obs observations for X distributions
+        observations = np.random.multivariate_normal(mu_vector.flatten(), cov_matrix, size=num_obs)
+
+        # Empirical means vector calculation
+        mu_simulated = observations.mean(axis=0).reshape(-1, 1)
+
+        if lw_shrinkage:  # If applying Ledoit-Wolf shrinkage
+            cov_simulated = LedoitWolf().fit(observations).covariance_
+
+        else:  # Simple empirical covariance matrix
+            cov_simulated = np.cov(observations, rowvar=False)
+
+        return mu_simulated, cov_simulated
 
     @staticmethod
     def _cluster_kmeans_base(corr, max_num_clusters=None, n_init=10):
@@ -149,7 +250,53 @@ class NestedClusteredOptimisation:
                                              Silhouette Coefficient series
         """
 
-        pass
+        # Distance matrix from correlation matrix
+        dist_matrix = ((1 - corr.fillna(0)) / 2) ** (1 / 2)
+
+        # Series for Silhouette Coefficients - cluster fit measure
+        silh_coef_optimal = pd.Series(dtype='float64')
+
+        # If maximum number of clusters undefined, it's equal to half the number of elements
+        if max_num_clusters is None:
+            max_num_clusters = round(corr.shape[0] / 2)
+
+        # Iterating over the allowed iteration times for k-means
+        for init in range(1, n_init):
+            # Iterating through every number of clusters
+            for num_clusters in range(2, max_num_clusters + 1):
+                # Computing k-means clustering
+                kmeans = KMeans(n_clusters=num_clusters, n_init=init)
+                kmeans = kmeans.fit(dist_matrix)
+
+                # Computing a Silhouette Coefficient - cluster fit measure
+                silh_coef = silhouette_samples(dist_matrix, kmeans.labels_)
+
+                # Metrics to compare numbers of clusters
+                stat = (silh_coef.mean() / silh_coef.std(), silh_coef_optimal.mean() / silh_coef_optimal.std())
+
+                # If this is the first metric or better than the previous
+                # we set it as the optimal number of clusters
+                if np.isnan(stat[1]) or stat[0] > stat[1]:
+                    silh_coef_optimal = silh_coef
+                    kmeans_optimal = kmeans
+
+        # Sorting labels of clusters
+        new_index = np.argsort(kmeans_optimal.labels_)
+
+        # Reordering correlation matrix rows
+        corr = corr.iloc[new_index]
+
+        # Reordering correlation matrix columns
+        corr = corr.iloc[:, new_index]
+
+        # Preparing cluster members as dict
+        clusters = {i: corr.columns[np.where(kmeans_optimal.labels_ == i)[0]].tolist() for \
+                    i in np.unique(kmeans_optimal.labels_)}
+
+        # Silhouette Coefficient series
+        silh_coef_optimal = pd.Series(silh_coef_optimal, index=dist_matrix.index)
+
+        return corr, clusters, silh_coef_optimal
 
     @staticmethod
     def _form_block_matrix(num_blocks, block_size, block_corr):
@@ -162,7 +309,16 @@ class NestedClusteredOptimisation:
         :return: (np.array) Resulting correlation matrix
         """
 
-        pass
+        # Creating a single block with all elements as block_corr
+        block = np.ones((block_size, block_size)) * block_corr
+
+        # Setting the main diagonal to ones
+        block[range(block_size), range(block_size)] = 1
+
+        # Create a block diagonal matrix with a number of equal blocks
+        res_matrix = block_diag(*([block] * num_blocks))
+
+        return res_matrix
 
     def form_true_matrix(self, num_blocks, block_size, block_corr, std=None):
         """
@@ -179,4 +335,32 @@ class NestedClusteredOptimisation:
         :param std: (float) Correlation between the clusters. If None, taken a random value from uniform dist[0.05, 0.2]
         :return: (np.array, pd.DataFrame) Resulting vector of means and the dataframe with covariance matrix
         """
-        pass
+
+        # Creating a block correlation matrix
+        corr_matrix = self._form_block_matrix(num_blocks, block_size, block_corr)
+
+        # Transforming to DataFrame
+        corr_matrix = pd.DataFrame(corr_matrix)
+
+        # Getting columns of matrix separately
+        columns = corr_matrix.columns.tolist()
+
+        # Randomizing the order of the columns
+        np.random.shuffle(columns)
+        corr_matrix = corr_matrix[columns].loc[columns].copy(deep=True)
+
+        if std is None:  # Default intra-cluster correlations at 0.5
+            std = np.random.uniform(.05, .2, corr_matrix.shape[0])
+        else:  # Or the ones set by user
+            std = np.array([std] * corr_matrix.shape[1])
+
+        # Class to calculate covariance from the correlation function
+        risk_estimators = RiskEstimators()
+
+        # Calculating covariance matrix from the generated correlation matrix
+        cov_matrix = risk_estimators.corr_to_cov(corr_matrix, std)
+
+        # Vector of means
+        mu_vec = np.random.normal(std, std, cov_matrix.shape[0]).reshape(-1, 1)
+
+        return mu_vec, cov_matrix

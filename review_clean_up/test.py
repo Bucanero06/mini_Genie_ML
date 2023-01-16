@@ -6,7 +6,7 @@ import pandas as pd
 
 # import mlfinlab as mlf
 from Modules._Data_Manager import Data_Manager
-from _pipeline_scripts_examples.fml.Utility_Functions import get_daily_volatility
+from _old_pipeline_scripts_examples.fml.Utility_Functions import get_daily_volatility
 
 # FILE_NAME = "USA100_bid_ask_price_sample.csv"
 file_name = "Backtest_Data.csv"

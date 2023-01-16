@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 from matplotlib import pyplot as plt
 
-from _pipeline_scripts_examples.fml.Cross_Validation import PurgedKFold
+from _old_pipeline_scripts_examples.fml.Cross_Validation import PurgedKFold
 
 
 # Snippet from Jeff Heaton's video linked in the research

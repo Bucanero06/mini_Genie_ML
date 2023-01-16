@@ -1,6 +1,6 @@
 from sklearn.model_selection import GridSearchCV, RandomizedSearchCV
 
-from _pipeline_scripts_examples.fml.Cross_Validation import PurgedKFold
+from _old_pipeline_scripts_examples.fml.Cross_Validation import PurgedKFold
 
 
 # Snippets from Advances in Financial Machine Learning by Dr. Marcos Lopez de Prado

@@ -10,8 +10,8 @@ from sklearn.svm import SVC
 from sklearn.tree import DecisionTreeClassifier
 
 from Modules._Data_Manager import Data_Manager
-from _pipeline_scripts_examples.fml.Sample_Weights import get_weights_and_avgu
-from _pipeline_scripts_examples.fml.Utility_Functions import get_daily_volatility
+from _old_pipeline_scripts_examples.fml.Sample_Weights import get_weights_and_avgu
+from _old_pipeline_scripts_examples.fml.Utility_Functions import get_daily_volatility
 
 
 def returns_series(xtest, sd, times, bids, asks, filtered):
@@ -180,7 +180,7 @@ def backtest_cv(data_file_names, data_file_dirs):
     backtest_df = pd.DataFrame()
 
     i = 1
-    from _pipeline_scripts_examples.fml.Cross_Validation import PurgedKFold
+    from _old_pipeline_scripts_examples.fml.Cross_Validation import PurgedKFold
     cvGen = PurgedKFold(n_splits=10, t1=t1, pctEmbargo=0.01)
     for train, test in cvGen.split(X=X):
         X_train_full = X.iloc[train, :].copy()

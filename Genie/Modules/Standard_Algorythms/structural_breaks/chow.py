@@ -3,8 +3,8 @@ Explosiveness tests: Chow-Type Dickey-Fuller Test
 """
 
 import pandas as pd
-from Modules.structural_breaks.sadf import get_betas
-from Modules.util import mp_pandas_obj
+from Modules.Standard_Algorythms.structural_breaks.sadf import get_betas
+from Modules.Standard_Algorythms.util import mp_pandas_obj
 
 
 # pylint: disable=invalid-name

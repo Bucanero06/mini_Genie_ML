@@ -5,7 +5,7 @@ Explosiveness tests: SADF
 from typing import Union, Tuple
 import pandas as pd
 import numpy as np
-from Modules.util.multiprocess import mp_pandas_obj
+from Modules.Standard_Algorythms.util.multiprocess import mp_pandas_obj
 
 
 # pylint: disable=invalid-name

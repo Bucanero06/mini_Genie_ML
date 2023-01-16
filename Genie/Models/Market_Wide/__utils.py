@@ -315,7 +315,6 @@ def __genie_strategy__1(data, num_threads=1):
     import vectorbtpro as vbt
 
     # Import MlFinLab tools
-    import mlfinlab as ml
 
     '''Primary Model'''
     # Compute moving averages

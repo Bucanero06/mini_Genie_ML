@@ -32,6 +32,15 @@ def sample_triple_barrier_strat_labeling(data, num_threads=1, dates=None):
                 "volume": data.get("Tick volume").tz_localize(None),
             }
         )
+    elif isinstance(data, pd.DataFrame):
+        #make sure the data has the correct columns
+        try:
+            data = data[["close", "open", "high", "low", "volume"]]
+        except:
+            raise ValueError("Data is missing columns")
+
+    else:
+        raise ValueError("Data must be a DataFrame or vbt.Data")
 
     if dates is not None:
         data = data.loc[dates[0]: dates[1]]
@@ -42,104 +51,29 @@ def sample_triple_barrier_strat_labeling(data, num_threads=1, dates=None):
     slow_window = 50
 
     # STRATEGY!!!!
-    fast_mavg = data["close"].rolling(window=fast_window, min_periods=fast_window, center=False).mean()
-    slow_mavg = data["close"].rolling(window=slow_window, min_periods=slow_window, center=False).mean()
-    # SUMCON_indicator = vbt.IF.from_techcon("SUMCON")
-    # indicator_bs = SUMCON_indicator.run(
-    #     open=data["open"],
-    #     high=data["high"],
-    #     low=data["low"],
-    #     close=data["close"],
-    #     volume=data["volume"],
-    #     smooth=30
-    # )
-    # SUMCON_result = indicator_bs.buy - indicator_bs.sell
-
-    Trend_filter_1_timeframes = np.array(["15 min"])
-    Trend_filter_atr_windows = np.array([7])
-    Trend_filter_1_data_lookback_windows = np.array([7])
-    #
-    PEAK_and_ATR_timeframes = np.array(["5 min"])
-    atr_windows = np.array([7])
-    data_lookback_windows = np.array([7])
-    #
-    EMAs_timeframes = np.array(["1 min"])
-    ema_1_windows = np.array([30])
-    ema_2_windows = np.array([33])
-    #
-    take_profit_points = np.array([100])
-    #
-    stop_loss_points = np.array([-100])
+    # fast_mavg = data["close"].rolling(window=fast_window, min_periods=fast_window, center=False).mean()
+    # slow_mavg = data["close"].rolling(window=slow_window, min_periods=slow_window, center=False).mean()
+    SUMCON_indicator = vbt.IF.from_techcon("SUMCON")
+    indicator_bs = SUMCON_indicator.run(
+        open=data["open"],
+        high=data["high"],
+        low=data["low"],
+        close=data["close"],
+        volume=data["volume"],
+        smooth=30
+    )
+    SUMCON_result = indicator_bs.buy - indicator_bs.sell
 
     '''Compile Structure and Run Master Indicator'''
-    # from mini_genie_source.Strategies.Money_Maker_Strategy import apply_function
-    # from mini_genie_source.Strategies.Money_Maker_Strategy import cache_func
-    # Master_Indicator = vbt.IF(
-    #     input_names=[
-    #         'low_data', 'high_data', 'close_data',
-    #         # 'datetime_index',
-    #     ],
-    #     param_names=[
-    #         'Trend_filter_1_timeframes', 'Trend_filter_atr_windows', 'Trend_filter_1_data_lookback_windows',
-    #         'PEAK_and_ATR_timeframes', 'atr_windows', 'data_lookback_windows',
-    #         'EMAs_timeframes', 'ema_1_windows', 'ema_2_windows',
-    #         'take_profit_points',
-    #         'stop_loss_points'
-    #     ],
-    #     output_names=[
-    #         'long_entries', 'long_exits', 'short_entries', 'short_exits',
-    #         'take_profit_points', 'stop_loss_points'
-    #     ]
-    # ).with_apply_func(
-    #     apply_func=apply_function,
-    #     cache_func=cache_func,
-    #     keep_pd=True,
-    #     param_product=False,
-    #     execute_kwargs=dict(
-    #         engine='ray',
-    #         init_kwargs={
-    #             # 'address': 'auto',
-    #             'num_cpus': 28,
-    #             'ignore_reinit_error': True,
-    #         },
-    #         show_progress=True
-    #     ),
-    #     Trend_filter_1_timeframes='1d',
-    #     Trend_filter_atr_windows=5,
-    #     Trend_filter_1_data_lookback_windows=3,
-    #     PEAK_and_ATR_timeframes='1d',
-    #     atr_windows=5,
-    #     data_lookback_windows=3,
-    #     EMAs_timeframes='1h',
-    #     ema_1_windows=13,
-    #     ema_2_windows=50,
-    #     take_profit_points=300,
-    #     stop_loss_points=-600,
-    # ).run(
-    #     data["low"], data["high"], data["close"],
-    #     Trend_filter_1_timeframes=Trend_filter_1_timeframes,
-    #     Trend_filter_atr_windows=Trend_filter_atr_windows,
-    #     Trend_filter_1_data_lookback_windows=Trend_filter_1_data_lookback_windows,
-    #     PEAK_and_ATR_timeframes=PEAK_and_ATR_timeframes,
-    #     atr_windows=atr_windows,
-    #     data_lookback_windows=data_lookback_windows,
-    #     EMAs_timeframes=EMAs_timeframes,
-    #     ema_1_windows=ema_1_windows,
-    #     ema_2_windows=ema_2_windows,
-    #     take_profit_points=take_profit_points,
-    #     stop_loss_points=stop_loss_points,
-    # )
-    # # Compute sides
-    # data['side'] = np.nan
-    #
+    # Compute sides
     # long_signals = Master_Indicator.long_entries.values & (SUMCON_result > 0.05)
     # short_signals = Master_Indicator.short_entries.values & (SUMCON_result < -0.05)
     data['side'] = np.nan
 
-    long_signals = fast_mavg >= slow_mavg
-    short_signals = fast_mavg < slow_mavg
-    # long_signals = (SUMCON_result > 0.05)
-    # short_signals = (SUMCON_result < -0.05)
+    # long_signals = fast_mavg >= slow_mavg
+    # short_signals = fast_mavg < slow_mavg
+    long_signals = (SUMCON_result > 0.05)
+    short_signals = (SUMCON_result < -0.05)
     data['side'] = 0
     data.loc[long_signals, 'side'] = 1
     data.loc[short_signals, 'side'] = -1
@@ -212,7 +146,7 @@ if __name__ == '__main__':
     pd.set_option('display.max_columns', None)
     pd.set_option('display.max_rows', None)
     retults = sample_triple_barrier_strat_labeling(symbols_data, num_threads=28,
-                                                   # dates=['2019-01-01', '2019-05-01']
+                                                   dates=['2019-01-01', '2019-05-01']
                                                    )
 
     # display all columns and rows
@@ -224,7 +158,6 @@ if __name__ == '__main__':
 
     X = retults[['open', 'close', 'high', 'low']].values
     bins = np.squeeze(retults[['bin']].values)
-
     y = np.squeeze(retults[['label_side']].values) * bins
 
     X_train, y_train = X[:train_length], y[:train_length]
